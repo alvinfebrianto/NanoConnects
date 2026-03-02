@@ -2,7 +2,7 @@
 
 NanoConnect is a platform that matches SMEs (UMKM) with local nano influencers based on budget, niche, and target audience.
 
-You are on Git Bash on Windows.
+You are on Bash on Windows Terminal.
 
 ## Always-apply rules
 
