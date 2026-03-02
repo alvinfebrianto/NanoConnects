@@ -165,6 +165,126 @@ describe("AiRecommendationService", () => {
       expect(result.summary).toContain("Influencer");
     });
 
+    it("normalizes near-valid AI output before schema validation", async () => {
+      const mockGenerateText: GenerateTextFn = vi.fn().mockResolvedValue({
+        output: {
+          recommendations: [
+            {
+              influencer_id: 123,
+              match_score: "88",
+              reasons: "Niche sangat relevan",
+              content_strategy: "Konten review dan edukasi produk",
+            },
+          ],
+          summary: "Rekomendasi sudah disesuaikan.",
+        },
+      });
+
+      const service = createAiRecommendationService(
+        {
+          apiKeys: ["test-key"],
+          model: "test-model",
+        },
+        {
+          generateText: mockGenerateText,
+          createProvider: () => ({ model: () => "mock-model" }),
+        }
+      );
+
+      const result = await service.generateRecommendations(
+        mockCampaign,
+        mockInfluencers
+      );
+
+      expect(result.recommendations).toHaveLength(1);
+      expect(result.recommendations[0].influencerId).toBe("123");
+      expect(result.recommendations[0].matchScore).toBe(88);
+      expect(result.recommendations[0].reasons).toEqual([
+        "Niche sangat relevan",
+      ]);
+      expect(result.recommendations[0].contentStrategy).toBe(
+        "Konten review dan edukasi produk"
+      );
+    });
+
+    it("extracts and parses JSON payload embedded in text", async () => {
+      const mockGenerateText: GenerateTextFn = vi.fn().mockResolvedValue({
+        output: `Berikut hasil rekomendasi:
+{
+  "recommendations": [
+    {
+      "influencerId": "inf-1",
+      "matchScore": 81,
+      "reasons": ["Cocok dengan niche"],
+      "contentStrategy": "Konten tutorial singkat"
+    }
+  ],
+  "summary": "Rekomendasi dari model."
+}`,
+      });
+
+      const service = createAiRecommendationService(
+        {
+          apiKeys: ["test-key"],
+          model: "test-model",
+        },
+        {
+          generateText: mockGenerateText,
+          createProvider: () => ({ model: () => "mock-model" }),
+        }
+      );
+
+      const result = await service.generateRecommendations(
+        mockCampaign,
+        mockInfluencers
+      );
+
+      expect(result.recommendations).toHaveLength(1);
+      expect(result.recommendations[0].influencerId).toBe("inf-1");
+      expect(result.summary).toContain("Rekomendasi");
+    });
+
+    it("normalizes alternative key formats and numeric coercions", async () => {
+      const mockGenerateText: GenerateTextFn = vi.fn().mockResolvedValue({
+        output: {
+          matches: [
+            {
+              influencer: { id: "inf-1" },
+              score: "88.7",
+              justifications: ["Niche relevan", 123],
+              strategi_konten: "Konten review produk lokal",
+            },
+          ],
+          kesimpulan: ["Rekomendasi cocok", "untuk kampanye ini."],
+        },
+      });
+
+      const service = createAiRecommendationService(
+        {
+          apiKeys: ["test-key"],
+          model: "test-model",
+        },
+        {
+          generateText: mockGenerateText,
+          createProvider: () => ({ model: () => "mock-model" }),
+        }
+      );
+
+      const result = await service.generateRecommendations(
+        mockCampaign,
+        mockInfluencers
+      );
+
+      expect(result.recommendations).toHaveLength(1);
+      expect(result.recommendations[0].influencerId).toBe("inf-1");
+      expect(result.recommendations[0].matchScore).toBe(89);
+      expect(result.recommendations[0].reasons).toEqual(["Niche relevan", "123"]);
+      expect(result.recommendations[0].contentStrategy).toBe(
+        "Konten review produk lokal"
+      );
+      expect(result.summary).toContain("Rekomendasi cocok");
+    });
+
     it("handles empty influencer list gracefully", async () => {
       const mockGenerateText: GenerateTextFn = vi.fn();
 
@@ -238,7 +358,7 @@ describe("AiRecommendationService", () => {
       expect(usedKeys).toContain("key-2");
     });
 
-    it("throws when all API keys exhausted", async () => {
+    it("falls back deterministically when all API keys exhausted", async () => {
       const rateLimitError = new Error("Rate limit exceeded");
       (rateLimitError as unknown as Record<string, unknown>).status = 429;
 
@@ -257,9 +377,98 @@ describe("AiRecommendationService", () => {
         }
       );
 
-      await expect(
-        service.generateRecommendations(mockCampaign, mockInfluencers)
-      ).rejects.toThrow("Semua API key telah mencapai batas");
+      const result = await service.generateRecommendations(
+        mockCampaign,
+        mockInfluencers
+      );
+
+      expect(result.recommendations.length).toBeGreaterThan(0);
+      expect(result.summary).toContain("respons AI tidak konsisten");
+    });
+
+    it("retries when fallback JSON still fails schema validation", async () => {
+      const mockGenerateText: GenerateTextFn = vi
+        .fn()
+        .mockResolvedValueOnce({
+          output: {
+            recommendations: [
+              {
+                influencerId: "inf-1",
+                matchScore: "invalid-score",
+                reasons: [],
+                contentStrategy: "",
+              },
+            ],
+            summary: "Output pertama tidak valid",
+          },
+        })
+        .mockResolvedValueOnce({
+          output: {
+            recommendations: [],
+            summary: "Fallback pertama juga tidak valid",
+          },
+        })
+        .mockResolvedValueOnce({
+          output: {
+            recommendations: [
+              {
+                influencerId: "inf-1",
+                matchScore: 84,
+                reasons: ["Cocok untuk niche kampanye"],
+                contentStrategy: "Review dan demo produk",
+              },
+            ],
+            summary: "Berhasil setelah retry",
+          },
+        });
+
+      const service = createAiRecommendationService(
+        {
+          apiKeys: ["key-1", "key-2"],
+          model: "test-model",
+        },
+        {
+          generateText: mockGenerateText,
+          createProvider: () => ({ model: () => "mock-model" }),
+        }
+      );
+
+      const result = await service.generateRecommendations(
+        mockCampaign,
+        mockInfluencers
+      );
+
+      expect(result.recommendations).toHaveLength(1);
+      expect(result.summary).toBe("Berhasil setelah retry");
+      expect(mockGenerateText).toHaveBeenCalledTimes(3);
+    });
+
+    it("returns deterministic fallback when AI keeps failing", async () => {
+      const mockGenerateText: GenerateTextFn = vi
+        .fn()
+        .mockRejectedValue(new Error("Unexpected provider response"));
+
+      const service = createAiRecommendationService(
+        {
+          apiKeys: ["key-1"],
+          model: "test-model",
+        },
+        {
+          generateText: mockGenerateText,
+          createProvider: () => ({ model: () => "mock-model" }),
+        }
+      );
+
+      const result = await service.generateRecommendations(
+        mockCampaign,
+        mockInfluencers
+      );
+
+      expect(result.recommendations.length).toBeGreaterThan(0);
+      expect(result.recommendations[0].influencerId).toBe("inf-1");
+      expect(result.recommendations[0].matchScore).toBeGreaterThanOrEqual(0);
+      expect(result.recommendations[0].matchScore).toBeLessThanOrEqual(100);
+      expect(result.summary).toContain("respons AI tidak konsisten");
     });
   });
 });

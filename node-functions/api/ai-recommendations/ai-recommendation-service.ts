@@ -42,6 +42,11 @@ interface AiServiceDependencies {
   createProvider: (apiKey: string) => { model: (id: string) => unknown };
 }
 
+type UnknownRecord = Record<string, unknown>;
+
+const FALLBACK_SUMMARY_PREFIX =
+  "Rekomendasi disusun dari analisis data influencer karena respons AI tidak konsisten.";
+
 function buildSystemPrompt(): string {
   return `Kamu adalah AI Marketing Expert untuk platform NanoConnect yang menghubungkan UMKM (SME) dengan nano-influencer di Indonesia.
 
@@ -147,7 +152,11 @@ function isProviderError(error: unknown): boolean {
 }
 
 function shouldRetryError(error: unknown): boolean {
-  return isRateLimitError(error) || isProviderError(error);
+  return (
+    isRateLimitError(error) ||
+    isProviderError(error) ||
+    isRecommendationSchemaError(error)
+  );
 }
 
 const RATE_LIMIT_ERROR_MSG =
@@ -156,8 +165,54 @@ const RATE_LIMIT_ERROR_MSG =
 const PROVIDER_ERROR_MSG =
   "Provider AI mengalami gangguan. Silakan coba lagi nanti.";
 
+const SCHEMA_ERROR_MSG =
+  "Format output AI belum sesuai. Silakan coba lagi dalam beberapa saat.";
+
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
+
+const toError = (error: unknown): Error =>
+  error instanceof Error ? error : new Error(String(error));
+
+const calculateRetryDelay = (attempt: number): number => {
+  const baseDelay = 1000 * 2 ** attempt;
+  const jitter = Math.random() * 1000;
+  return baseDelay + jitter;
+};
+
+const ensureRetryableError = (error: unknown): void => {
+  if (!shouldRetryError(error)) {
+    throw error;
+  }
+};
+
+const updateConsecutiveProviderErrors = (
+  error: unknown,
+  consecutiveProviderErrors: number
+): number => {
+  if (!isProviderError(error)) {
+    return 0;
+  }
+
+  const nextConsecutiveProviderErrors = consecutiveProviderErrors + 1;
+  if (nextConsecutiveProviderErrors >= 3) {
+    throw new Error(PROVIDER_ERROR_MSG);
+  }
+  return nextConsecutiveProviderErrors;
+};
+
+const throwRetryExhaustedError = (lastError: Error | null): never => {
+  if (lastError && isRateLimitError(lastError)) {
+    throw new Error(RATE_LIMIT_ERROR_MSG);
+  }
+  if (lastError && isProviderError(lastError)) {
+    throw new Error(PROVIDER_ERROR_MSG);
+  }
+  if (lastError && isRecommendationSchemaError(lastError)) {
+    throw new Error(SCHEMA_ERROR_MSG);
+  }
+  throw new Error("Gagal membuat rekomendasi setelah mencoba semua API key.");
+};
 
 const defaultDependencies: AiServiceDependencies = {
   generateText: (options) =>
@@ -170,7 +225,6 @@ const defaultDependencies: AiServiceDependencies = {
       model: (id: string) =>
         wrapLanguageModel({
           model: openrouter(id, {
-            reasoning: { exclude: true, effort: "none" },
             plugins: [{ id: "response-healing" }],
           }),
           middleware: extractJsonMiddleware(),
@@ -179,13 +233,372 @@ const defaultDependencies: AiServiceDependencies = {
   },
 };
 
+class RecommendationSchemaError extends Error {
+  constructor() {
+    super("Output AI tidak valid terhadap schema rekomendasi.");
+    this.name = "RecommendationSchemaError";
+  }
+}
+
+const isRecord = (value: unknown): value is UnknownRecord =>
+  typeof value === "object" && value !== null;
+
+const pickValue = (
+  source: UnknownRecord,
+  keys: readonly string[]
+): unknown | undefined => {
+  for (const key of keys) {
+    const candidate = source[key];
+    if (candidate !== undefined) {
+      return candidate;
+    }
+  }
+  return undefined;
+};
+
+const getFirstJsonCandidate = (text: string): string | null => {
+  const firstBraceIndex = text.indexOf("{");
+  const firstBracketIndex = text.indexOf("[");
+
+  if (firstBraceIndex === -1 && firstBracketIndex === -1) {
+    return null;
+  }
+
+  const startIndex =
+    firstBraceIndex === -1
+      ? firstBracketIndex
+      : firstBracketIndex === -1
+        ? firstBraceIndex
+        : Math.min(firstBraceIndex, firstBracketIndex);
+  const openingChar = text[startIndex];
+  const closingChar = openingChar === "{" ? "}" : "]";
+
+  let depth = 0;
+  let inString = false;
+  let isEscaped = false;
+
+  for (let index = startIndex; index < text.length; index++) {
+    const character = text[index];
+
+    if (isEscaped) {
+      isEscaped = false;
+      continue;
+    }
+
+    if (character === "\\") {
+      isEscaped = true;
+      continue;
+    }
+
+    if (character === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) {
+      continue;
+    }
+
+    if (character === openingChar) {
+      depth += 1;
+      continue;
+    }
+
+    if (character === closingChar) {
+      depth -= 1;
+      if (depth === 0) {
+        return text.slice(startIndex, index + 1);
+      }
+    }
+  }
+
+  return null;
+};
+
+const tryParseLooseJson = (value: unknown): unknown => {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return value;
+  }
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    const candidate = getFirstJsonCandidate(trimmed);
+    if (!candidate) {
+      return value;
+    }
+
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      return value;
+    }
+  }
+};
+
+const normalizeRecommendationItem = (value: unknown): unknown => {
+  if (!isRecord(value)) {
+    return value;
+  }
+
+  const nestedInfluencer = isRecord(value.influencer) ? value.influencer : null;
+  const influencerIdRaw = pickValue(value, [
+    "influencerId",
+    "influencer_id",
+    "influencerID",
+    "influencer",
+    "id",
+    "influencer_id_str",
+  ]);
+  const matchScoreRaw = pickValue(value, [
+    "matchScore",
+    "match_score",
+    "score",
+    "nilaiKecocokan",
+  ]);
+  const reasonsRaw = pickValue(value, [
+    "reasons",
+    "reason",
+    "alasan",
+    "justifications",
+  ]);
+  const contentStrategyRaw = pickValue(value, [
+    "contentStrategy",
+    "content_strategy",
+    "strategy",
+    "strategiKonten",
+    "strategi_konten",
+    "recommendedContentStrategy",
+  ]);
+
+  let normalizedReasons = reasonsRaw;
+  if (typeof reasonsRaw === "string") {
+    normalizedReasons = [reasonsRaw];
+  }
+  if (Array.isArray(reasonsRaw)) {
+    normalizedReasons = reasonsRaw
+      .map((item) => String(item).trim())
+      .filter((item) => item.length > 0);
+  }
+
+  let normalizedMatchScore = matchScoreRaw;
+  if (typeof matchScoreRaw === "string" && matchScoreRaw.trim().length > 0) {
+    normalizedMatchScore = Number.parseFloat(matchScoreRaw);
+  }
+  if (
+    typeof normalizedMatchScore === "number" &&
+    Number.isFinite(normalizedMatchScore)
+  ) {
+    normalizedMatchScore = Math.round(
+      Math.min(100, Math.max(0, normalizedMatchScore))
+    );
+  }
+
+  let normalizedInfluencerId = influencerIdRaw;
+  if (
+    isRecord(influencerIdRaw) &&
+    (typeof influencerIdRaw.id === "string" ||
+      typeof influencerIdRaw.id === "number")
+  ) {
+    normalizedInfluencerId = influencerIdRaw.id;
+  } else if (
+    nestedInfluencer &&
+    (typeof nestedInfluencer.id === "string" ||
+      typeof nestedInfluencer.id === "number")
+  ) {
+    normalizedInfluencerId = nestedInfluencer.id;
+  }
+
+  return {
+    influencerId:
+      typeof normalizedInfluencerId === "string" ||
+      typeof normalizedInfluencerId === "number"
+        ? String(normalizedInfluencerId)
+        : normalizedInfluencerId,
+    matchScore: normalizedMatchScore,
+    reasons: normalizedReasons,
+    contentStrategy: contentStrategyRaw,
+  };
+};
+
+const normalizeRecommendationOutput = (value: unknown): unknown => {
+  const parsedValue = tryParseLooseJson(value);
+
+  if (Array.isArray(parsedValue)) {
+    return {
+      recommendations: parsedValue.map((item) => normalizeRecommendationItem(item)),
+      summary: "Ringkasan rekomendasi kampanye.",
+    };
+  }
+
+  if (!isRecord(parsedValue)) {
+    return parsedValue;
+  }
+
+  const nestedPayload = pickValue(parsedValue, [
+    "data",
+    "result",
+    "output",
+    "response",
+  ]);
+  if (isRecord(nestedPayload) || Array.isArray(nestedPayload)) {
+    return normalizeRecommendationOutput(nestedPayload);
+  }
+
+  const recommendationsRaw = pickValue(parsedValue, [
+    "recommendations",
+    "recommendation",
+    "items",
+    "matches",
+    "rekomendasi",
+  ]);
+  const summaryRaw = pickValue(parsedValue, [
+    "summary",
+    "ringkasan",
+    "analysis",
+    "kesimpulan",
+  ]);
+
+  const normalizedSummary =
+    typeof summaryRaw === "string"
+      ? summaryRaw
+      : Array.isArray(summaryRaw)
+        ? summaryRaw.map((item) => String(item)).join(" ")
+        : summaryRaw;
+
+  return {
+    recommendations: Array.isArray(recommendationsRaw)
+      ? recommendationsRaw.map((item) => normalizeRecommendationItem(item))
+      : recommendationsRaw,
+    summary: normalizedSummary,
+  };
+};
+
+const normalizeText = (value: string): string =>
+  value
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const tokenizeText = (value: string): Set<string> =>
+  new Set(
+    normalizeText(value)
+      .split(" ")
+      .filter((token) => token.length >= 3)
+  );
+
+const calculateOverlapRatio = (left: string, right: string): number => {
+  const leftTokens = tokenizeText(left);
+  const rightTokens = tokenizeText(right);
+
+  if (leftTokens.size === 0 || rightTokens.size === 0) {
+    return 0;
+  }
+
+  let overlap = 0;
+  for (const token of leftTokens) {
+    if (rightTokens.has(token)) {
+      overlap += 1;
+    }
+  }
+
+  return overlap / Math.max(1, Math.min(leftTokens.size, rightTokens.size));
+};
+
+const buildDeterministicRecommendations = (
+  campaign: CampaignPayload,
+  influencers: Influencer[]
+): RecommendationOutput => {
+  const budgetPerInfluencer = campaign.budget / 4;
+
+  const ranked = influencers
+    .map((influencer) => {
+      const nicheSource = [
+        influencer.niche,
+        influencer.content_categories?.join(" ") ?? "",
+      ].join(" ");
+      const nicheOverlap = calculateOverlapRatio(campaign.niche, nicheSource);
+      const locationOverlap = calculateOverlapRatio(
+        campaign.location,
+        influencer.location
+      );
+      const engagementScore = Math.min(
+        1,
+        Math.max(0, influencer.engagement_rate / 8)
+      );
+      const budgetScore =
+        influencer.price_per_post <= campaign.budget
+          ? influencer.price_per_post <= budgetPerInfluencer
+            ? 1
+            : Math.max(0.4, 1 - (influencer.price_per_post - budgetPerInfluencer) / campaign.budget)
+          : 0;
+
+      const finalScore = Math.round(
+        Math.min(
+          100,
+          Math.max(
+            0,
+            nicheOverlap * 45 +
+              locationOverlap * 20 +
+              engagementScore * 20 +
+              budgetScore * 15
+          )
+        )
+      );
+
+      const reasons: string[] = [];
+      if (nicheOverlap > 0.25) {
+        reasons.push("Niche dan kategori konten relevan dengan kebutuhan kampanye.");
+      }
+      if (locationOverlap > 0.2) {
+        reasons.push("Lokasi influencer sejalan dengan target pasar kampanye.");
+      }
+      if (influencer.engagement_rate >= 3.5) {
+        reasons.push(
+          `Engagement rate ${influencer.engagement_rate}% cukup kuat untuk mendorong awareness.`
+        );
+      }
+      if (influencer.price_per_post <= campaign.budget) {
+        reasons.push("Estimasi biaya konten masih dalam rentang budget kampanye.");
+      }
+      if (reasons.length === 0) {
+        reasons.push("Profil influencer memiliki potensi menjangkau target audiens kampanye.");
+      }
+
+      return {
+        influencerId: influencer.id,
+        matchScore: finalScore,
+        reasons,
+        contentStrategy: `Buat konten ${campaign.campaign_type.toLowerCase()} yang menonjolkan value utama ${campaign.niche}, dengan call-to-action yang relevan untuk ${campaign.target_audience.toLowerCase()}.`,
+      };
+    })
+    .sort((a, b) => b.matchScore - a.matchScore);
+
+  const recommendations = ranked.slice(0, Math.min(5, ranked.length));
+  return {
+    recommendations,
+    summary: `${FALLBACK_SUMMARY_PREFIX} Dipilih ${recommendations.length} influencer dengan skor kecocokan tertinggi berdasarkan niche, lokasi, engagement, dan budget.`,
+  };
+};
+
 const parseRecommendationOutput = (value: unknown): RecommendationOutput => {
-  const parsed = recommendationSchema.safeParse(value);
+  const parsed = recommendationSchema.safeParse(
+    normalizeRecommendationOutput(value)
+  );
   if (!parsed.success) {
-    throw new Error("Output AI tidak valid terhadap schema rekomendasi.");
+    throw new RecommendationSchemaError();
   }
   return parsed.data;
 };
+
+const isRecommendationSchemaError = (error: unknown): boolean =>
+  error instanceof RecommendationSchemaError;
 
 export function createAiRecommendationService(
   config: AiConfig,
@@ -212,7 +625,10 @@ export function createAiRecommendationService(
 
       return parseRecommendationOutput(result.output);
     } catch (error) {
-      if (NoObjectGeneratedError.isInstance(error)) {
+      if (
+        NoObjectGeneratedError.isInstance(error) ||
+        isRecommendationSchemaError(error)
+      ) {
         const provider = dependencies.createProvider(currentKey);
         const fallbackModel = provider.model(config.model);
 
@@ -243,7 +659,7 @@ Balas hanya JSON valid yang sesuai schema. Jangan tambahkan markdown/code fence.
     influencers: Influencer[],
     maxRetries?: number
   ): Promise<RecommendationOutput> => {
-    const retries = maxRetries ?? (config.apiKeys.length * 2);
+    const retries = maxRetries ?? config.apiKeys.length * 2;
     let lastError: Error | null = null;
     let consecutiveProviderErrors = 0;
 
@@ -253,39 +669,20 @@ Balas hanya JSON valid yang sesuai schema. Jangan tambahkan markdown/code fence.
         consecutiveProviderErrors = 0;
         return result;
       } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
-
-        if (!shouldRetryError(error)) {
-          throw error;
-        }
-
-        if (isProviderError(error)) {
-          consecutiveProviderErrors++;
-          if (consecutiveProviderErrors >= 3) {
-            throw new Error(PROVIDER_ERROR_MSG);
-          }
-        } else {
-          consecutiveProviderErrors = 0;
-        }
-
-        const baseDelay = 1000 * Math.pow(2, attempt);
-        const jitter = Math.random() * 1000;
-        const delay = baseDelay + jitter;
-
-        await sleep(delay);
+        lastError = toError(error);
+        ensureRetryableError(error);
+        consecutiveProviderErrors = updateConsecutiveProviderErrors(
+          error,
+          consecutiveProviderErrors
+        );
+        await sleep(calculateRetryDelay(attempt));
       }
     }
 
-    if (lastError && isRateLimitError(lastError)) {
-      throw new Error(RATE_LIMIT_ERROR_MSG);
-    }
-    if (lastError && isProviderError(lastError)) {
-      throw new Error(PROVIDER_ERROR_MSG);
-    }
-    throw new Error("Gagal membuat rekomendasi setelah mencoba semua API key.");
+    throwRetryExhaustedError(lastError);
   };
 
-  const generateRecommendations = (
+  const generateRecommendations = async (
     campaign: CampaignPayload,
     influencers: Influencer[]
   ): Promise<RecommendationOutput> => {
@@ -296,7 +693,16 @@ Balas hanya JSON valid yang sesuai schema. Jangan tambahkan markdown/code fence.
           "Tidak ada influencer yang tersedia untuk kriteria kampanye ini.",
       });
     }
-    return generateWithRetry(campaign, influencers);
+
+    try {
+      return await generateWithRetry(campaign, influencers);
+    } catch (error) {
+      console.warn(
+        "Fallback ke rekomendasi deterministik karena AI gagal menghasilkan output valid.",
+        error
+      );
+      return buildDeterministicRecommendations(campaign, influencers);
+    }
   };
 
   return { generateRecommendations };
