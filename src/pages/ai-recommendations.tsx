@@ -79,7 +79,7 @@ const formatRupiah = (value: number) => `Rp ${value.toLocaleString("id-ID")}`;
 
 function ProcessingScreen() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-50 via-white to-accent-50 px-4 dark:bg-zinc-950">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-50 via-white to-accent-50 px-4 dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-950">
       <div className="w-full max-w-2xl text-center">
         <div className="relative mx-auto mb-8 h-24 w-24">
           <div className="absolute inset-0 animate-ping rounded-full bg-primary-200 dark:bg-primary-800/40" />
