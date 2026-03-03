@@ -28,6 +28,12 @@ const formatNumber = (num: number): string => {
   return num.toString();
 };
 
+export function calculateOrderPricing(pricePerPost: number) {
+  const platformFee = pricePerPost * 0.1;
+  const total = pricePerPost + platformFee;
+  return { basePrice: pricePerPost, platformFee, total };
+}
+
 const staggerContainer = {
   hidden: { opacity: 0 },
   show: {
@@ -186,7 +192,7 @@ function OrderCard({
               Harga per konten
             </span>
             <span className="font-bold font-display text-xl text-zinc-900 dark:text-white">
-              Rp {(influencer.price_per_post * 15_000).toLocaleString("id-ID")}
+              Rp {influencer.price_per_post.toLocaleString("id-ID")}
             </span>
           </div>
           <div className="flex items-center justify-between border-zinc-100 border-b pb-4 dark:border-zinc-800/50">
@@ -195,9 +201,9 @@ function OrderCard({
             </span>
             <span className="font-medium text-zinc-900 dark:text-zinc-300">
               Rp{" "}
-              {(influencer.price_per_post * 15_000 * 0.1).toLocaleString(
-                "id-ID"
-              )}
+              {calculateOrderPricing(
+                influencer.price_per_post
+              ).platformFee.toLocaleString("id-ID")}
             </span>
           </div>
           <div className="flex items-center justify-between pt-2">
@@ -206,9 +212,9 @@ function OrderCard({
             </span>
             <span className="font-bold font-display text-2xl text-primary-600">
               Rp{" "}
-              {(influencer.price_per_post * 15_000 * 1.1).toLocaleString(
-                "id-ID"
-              )}
+              {calculateOrderPricing(
+                influencer.price_per_post
+              ).total.toLocaleString("id-ID")}
             </span>
           </div>
         </div>

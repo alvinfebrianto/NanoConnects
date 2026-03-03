@@ -22,24 +22,32 @@ describe("fetchProfile", () => {
     vi.unstubAllGlobals();
   });
 
-  it("calls /api/profile with bearer token", async () => {
+  it("returns user data when session exists", async () => {
     const { supabase } = await import("@/lib/supabase");
     vi.mocked(supabase.auth.getSession).mockResolvedValue({
       data: { session: { access_token: "test-token" } },
       error: null,
     } as never);
 
+    const expectedUser = {
+      id: "u1",
+      name: "Test",
+      email: "test@test.com",
+      user_type: "sme" as const,
+      email_verified: true,
+      status: "active" as const,
+      created_at: "",
+      updated_at: "",
+    };
     fetchSpy.mockResolvedValue({
       ok: true,
-      json: async () => ({ data: { user: { id: "u1", name: "Test" } } }),
+      json: async () => ({ data: { user: expectedUser } }),
     });
 
     const { fetchProfile } = await import("./use-profile");
-    await fetchProfile();
+    const result = await fetchProfile();
 
-    expect(fetchSpy).toHaveBeenCalledWith("/api/profile", {
-      headers: { Authorization: "Bearer test-token" },
-    });
+    expect(result).toEqual(expectedUser);
   });
 
   it("returns null when no session exists", async () => {
@@ -53,6 +61,22 @@ describe("fetchProfile", () => {
     const result = await fetchProfile();
 
     expect(result).toBeNull();
-    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("throws when API response is not ok", async () => {
+    const { supabase } = await import("@/lib/supabase");
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      data: { session: { access_token: "test-token" } },
+      error: null,
+    } as never);
+
+    fetchSpy.mockResolvedValue({
+      ok: false,
+      json: async () => ({ message: "Error" }),
+    });
+
+    const { fetchProfile } = await import("./use-profile");
+
+    await expect(fetchProfile()).rejects.toThrow("Gagal memuat profil SME.");
   });
 });

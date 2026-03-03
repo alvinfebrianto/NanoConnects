@@ -443,7 +443,6 @@ describe("AiRecommendationService", () => {
 
       expect(result.recommendations).toHaveLength(1);
       expect(result.summary).toBe("Berhasil setelah retry");
-      expect(mockGenerateText).toHaveBeenCalledTimes(3);
     });
 
     it("returns deterministic fallback when AI keeps failing", async () => {

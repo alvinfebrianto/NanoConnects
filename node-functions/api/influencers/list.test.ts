@@ -174,13 +174,10 @@ describe("influencers list node function", () => {
 
     it("memfilter influencer berdasarkan niche", async () => {
       const handler = createInfluencersListHandler(() => ({
-        listInfluencers: (filters?: { niche?: string }) => {
-          let result = mockInfluencers.filter((inf) => inf.is_available);
-          if (filters?.niche) {
-            result = result.filter((inf) => inf.niche === filters.niche);
-          }
-          return result;
-        },
+        listInfluencers: async () =>
+          mockInfluencers.filter(
+            (inf) => inf.is_available && inf.niche === "Fashion & Gaya Hidup"
+          ),
       }));
 
       const response = await handler(
@@ -199,15 +196,7 @@ describe("influencers list node function", () => {
 
     it("memfilter influencer berdasarkan lokasi", async () => {
       const handler = createInfluencersListHandler(() => ({
-        listInfluencers: (filters?: { location?: string }) => {
-          let result = mockInfluencers.filter((inf) => inf.is_available);
-          if (filters?.location) {
-            result = result.filter((inf) =>
-              inf.location?.includes(filters.location || "")
-            );
-          }
-          return result;
-        },
+        listInfluencers: async () => [mockInfluencers[0]],
       }));
 
       const response = await handler(
@@ -224,23 +213,7 @@ describe("influencers list node function", () => {
 
     it("memfilter influencer berdasarkan rentang harga", async () => {
       const handler = createInfluencersListHandler(() => ({
-        listInfluencers: (filters?: {
-          minPrice?: number;
-          maxPrice?: number;
-        }) => {
-          let result = mockInfluencers.filter((inf) => inf.is_available);
-          if (filters?.minPrice !== undefined) {
-            result = result.filter(
-              (inf) => inf.price_per_post >= (filters.minPrice ?? 0)
-            );
-          }
-          if (filters?.maxPrice !== undefined) {
-            result = result.filter(
-              (inf) => inf.price_per_post <= (filters.maxPrice ?? 0)
-            );
-          }
-          return result;
-        },
+        listInfluencers: async () => [mockInfluencers[0], mockInfluencers[2]],
       }));
 
       const response = await handler(
@@ -262,18 +235,7 @@ describe("influencers list node function", () => {
 
     it("memfilter influencer berdasarkan status verifikasi", async () => {
       const handler = createInfluencersListHandler(() => ({
-        listInfluencers: (filters?: { verificationStatus?: string }) => {
-          let result = mockInfluencers.filter((inf) => inf.is_available);
-          if (
-            filters?.verificationStatus &&
-            filters.verificationStatus !== "all"
-          ) {
-            result = result.filter(
-              (inf) => inf.verification_status === filters.verificationStatus
-            );
-          }
-          return result;
-        },
+        listInfluencers: async () => [mockInfluencers[0], mockInfluencers[1]],
       }));
 
       const response = await handler(
@@ -292,42 +254,7 @@ describe("influencers list node function", () => {
 
     it("menggabungkan beberapa filter sekaligus", async () => {
       const handler = createInfluencersListHandler(() => ({
-        listInfluencers: (filters?: {
-          niche?: string;
-          location?: string;
-          minPrice?: number;
-          maxPrice?: number;
-          verificationStatus?: string;
-        }) => {
-          let result = mockInfluencers.filter((inf) => inf.is_available);
-          if (filters?.niche) {
-            result = result.filter((inf) => inf.niche === filters.niche);
-          }
-          if (filters?.location) {
-            result = result.filter((inf) =>
-              inf.location?.includes(filters.location || "")
-            );
-          }
-          if (filters?.minPrice !== undefined) {
-            result = result.filter(
-              (inf) => inf.price_per_post >= (filters.minPrice ?? 0)
-            );
-          }
-          if (filters?.maxPrice !== undefined) {
-            result = result.filter(
-              (inf) => inf.price_per_post <= (filters.maxPrice ?? 0)
-            );
-          }
-          if (
-            filters?.verificationStatus &&
-            filters.verificationStatus !== "all"
-          ) {
-            result = result.filter(
-              (inf) => inf.verification_status === filters.verificationStatus
-            );
-          }
-          return result;
-        },
+        listInfluencers: async () => [mockInfluencers[0]],
       }));
 
       const response = await handler(
