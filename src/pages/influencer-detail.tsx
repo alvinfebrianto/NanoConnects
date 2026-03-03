@@ -417,12 +417,12 @@ export function InfluencerDetail() {
                           >
                             <div className="mb-4 flex items-center justify-between">
                               <div className="flex items-center space-x-1">
-                                {[...new Array(5)].map((_, starIndex) => (
+                                {[1, 2, 3, 4, 5].map((starValue) => (
                                   <Star
-                                    className={`h-5 w-5 ${starIndex < review.rating ? "text-yellow-400" : "text-zinc-300 dark:text-zinc-600"}`}
-                                    key={`star-${starIndex}-${review.id}`}
+                                    className={`h-5 w-5 ${starValue <= review.rating ? "text-yellow-400" : "text-zinc-300 dark:text-zinc-600"}`}
+                                    key={`star-${starValue}-${review.id}`}
                                     weight={
-                                      starIndex < review.rating
+                                      starValue <= review.rating
                                         ? "fill"
                                         : "regular"
                                     }

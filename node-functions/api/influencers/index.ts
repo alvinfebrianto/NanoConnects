@@ -1,4 +1,9 @@
 import type { Influencer } from "../../../src/types";
+import {
+  createInternalServerError,
+  createNodeFunctionLogger,
+  emitAndReturn,
+} from "../../lib/evlog";
 import { createSupabaseClient } from "../../lib/supabase-client";
 import {
   attachPublicUserProfiles,
@@ -63,15 +68,20 @@ export const createInfluencersHandler = (
 ) =>
   async function onRequest(context: { request: Request }) {
     const { request } = context;
+    const log = createNodeFunctionLogger(request);
+    let response: Response;
+
     if (request.method !== "GET") {
-      return jsonResponse({ message: "Metode tidak diizinkan." }, 405);
+      response = jsonResponse({ message: "Metode tidak diizinkan." }, 405);
+      return emitAndReturn(log, response);
     }
 
     const url = new URL(request.url);
     const influencerId = url.searchParams.get("id");
 
     if (!influencerId) {
-      return jsonResponse({ message: "ID influencer wajib diisi." }, 400);
+      response = jsonResponse({ message: "ID influencer wajib diisi." }, 400);
+      return emitAndReturn(log, response);
     }
 
     try {
@@ -79,18 +89,28 @@ export const createInfluencersHandler = (
       const influencer = await getInfluencer(influencerId);
 
       if (!influencer) {
-        return jsonResponse({ message: "Influencer tidak ditemukan." }, 404);
+        response = jsonResponse(
+          { message: "Influencer tidak ditemukan." },
+          404
+        );
+        return emitAndReturn(log, response);
       }
 
-      return jsonResponse(
+      log.set({ influencer: { id: influencer.id } });
+      response = jsonResponse(
         { data: sanitizeInfluencerForPublic(influencer) },
         200
       );
-    } catch (_error) {
-      return jsonResponse(
-        { message: "Terjadi kesalahan saat memuat influencer." },
-        500
+      return emitAndReturn(log, response);
+    } catch (error) {
+      const structuredError = createInternalServerError(
+        error,
+        "Terjadi kesalahan saat memuat influencer.",
+        "Coba lagi beberapa saat lagi."
       );
+      log.error(structuredError, { action: "get-influencer" });
+      response = jsonResponse({ message: structuredError.message }, 500);
+      return emitAndReturn(log, response);
     }
   };
 

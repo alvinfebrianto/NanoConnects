@@ -1,4 +1,9 @@
 import type { Review } from "../../../src/types";
+import {
+  createInternalServerError,
+  createNodeFunctionLogger,
+  emitAndReturn,
+} from "../../lib/evlog";
 import { createSupabaseClient } from "../../lib/supabase-client";
 
 interface ReviewsHandlerDependencies {
@@ -38,27 +43,41 @@ export const createReviewsHandler = (
 ) =>
   async function onRequest(context: { request: Request }) {
     const { request } = context;
+    const log = createNodeFunctionLogger(request);
+    let response: Response;
+
     if (request.method !== "GET") {
-      return jsonResponse({ message: "Metode tidak diizinkan." }, 405);
+      response = jsonResponse({ message: "Metode tidak diizinkan." }, 405);
+      return emitAndReturn(log, response);
     }
 
     const url = new URL(request.url);
     const influencerId = url.searchParams.get("influencer_id");
 
     if (!influencerId) {
-      return jsonResponse({ message: "ID influencer wajib diisi." }, 400);
+      response = jsonResponse({ message: "ID influencer wajib diisi." }, 400);
+      return emitAndReturn(log, response);
     }
 
     try {
       const { getReviewsByInfluencer } = dependenciesFactory();
       const reviews = await getReviewsByInfluencer(influencerId);
+      log.set({
+        influencer: { id: influencerId },
+        reviews: { count: reviews.length },
+      });
 
-      return jsonResponse({ data: reviews }, 200);
-    } catch (_error) {
-      return jsonResponse(
-        { message: "Terjadi kesalahan saat memuat ulasan." },
-        500
+      response = jsonResponse({ data: reviews }, 200);
+      return emitAndReturn(log, response);
+    } catch (error) {
+      const structuredError = createInternalServerError(
+        error,
+        "Terjadi kesalahan saat memuat ulasan.",
+        "Coba lagi beberapa saat lagi."
       );
+      log.error(structuredError, { action: "list-reviews" });
+      response = jsonResponse({ message: structuredError.message }, 500);
+      return emitAndReturn(log, response);
     }
   };
 

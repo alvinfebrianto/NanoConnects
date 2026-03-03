@@ -1,4 +1,9 @@
 import type { Database } from "../../../src/lib/database.types";
+import {
+  createInternalServerError,
+  createNodeFunctionLogger,
+  emitAndReturn,
+} from "../../lib/evlog";
 import { createSupabaseClient } from "../../lib/supabase-client";
 
 const DELIVERABLES = [
@@ -245,21 +250,26 @@ export const createOrdersHandler = (
 ) =>
   async function onRequest(context: { request: Request }) {
     const { request } = context;
+    const log = createNodeFunctionLogger(request);
+    let response: Response;
 
     if (request.method !== "POST") {
-      return jsonResponse({ message: "Metode tidak diizinkan." }, 405);
+      response = jsonResponse({ message: "Metode tidak diizinkan." }, 405);
+      return emitAndReturn(log, response);
     }
 
     const accessToken = parseBearerToken(request.headers.get("Authorization"));
 
     if (!accessToken) {
-      return jsonResponse({ message: "Autentikasi diperlukan." }, 401);
+      response = jsonResponse({ message: "Autentikasi diperlukan." }, 401);
+      return emitAndReturn(log, response);
     }
 
     const payload = await parseOrderPayload(request);
     const validationError = validateOrderPayload(payload);
     if (validationError) {
-      return jsonResponse({ message: validationError }, 400);
+      response = jsonResponse({ message: validationError }, 400);
+      return emitAndReturn(log, response);
     }
 
     try {
@@ -271,16 +281,27 @@ export const createOrdersHandler = (
       );
 
       if (error) {
-        return jsonResponse({ message: error }, resolveOrderErrorStatus(error));
+        response = jsonResponse(
+          { message: error },
+          resolveOrderErrorStatus(error)
+        );
+        return emitAndReturn(log, response);
       }
 
       const orderId = await dependencies.insertOrder(order);
-      return jsonResponse({ data: { orderId } }, 201);
-    } catch (_error) {
-      return jsonResponse(
-        { message: "Terjadi kesalahan saat membuat pesanan." },
-        500
+      log.set({ order: { id: orderId } });
+      response = jsonResponse({ data: { orderId } }, 201);
+      return emitAndReturn(log, response);
+    } catch (error) {
+      const structuredError = createInternalServerError(
+        error,
+        "Terjadi kesalahan saat membuat pesanan.",
+        "Periksa data pesanan dan coba kembali."
       );
+
+      log.error(structuredError, { action: "create-order" });
+      response = jsonResponse({ message: structuredError.message }, 500);
+      return emitAndReturn(log, response);
     }
   };
 
