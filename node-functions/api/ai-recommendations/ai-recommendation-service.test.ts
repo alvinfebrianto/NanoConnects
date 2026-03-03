@@ -278,7 +278,10 @@ describe("AiRecommendationService", () => {
       expect(result.recommendations).toHaveLength(1);
       expect(result.recommendations[0].influencerId).toBe("inf-1");
       expect(result.recommendations[0].matchScore).toBe(89);
-      expect(result.recommendations[0].reasons).toEqual(["Niche relevan", "123"]);
+      expect(result.recommendations[0].reasons).toEqual([
+        "Niche relevan",
+        "123",
+      ]);
       expect(result.recommendations[0].contentStrategy).toBe(
         "Konten review produk lokal"
       );

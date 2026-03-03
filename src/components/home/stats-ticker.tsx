@@ -71,10 +71,10 @@ function StatCard({
       }`}
       style={{ transitionDelay: `${delay}ms` }}
     >
-      <dd className="order-first font-display font-bold text-4xl text-zinc-900 tracking-tight sm:text-5xl dark:text-white">
+      <dd className="order-first font-bold font-display text-4xl text-zinc-900 tracking-tight sm:text-5xl dark:text-white">
         {isVisible ? formatValue(count) : formatValue(0)}
       </dd>
-      <dt className="mt-2 font-medium text-sm text-zinc-600 leading-5 text-center dark:text-zinc-400">
+      <dt className="mt-2 text-center font-medium text-sm text-zinc-600 leading-5 dark:text-zinc-400">
         {label}
       </dt>
     </div>

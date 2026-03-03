@@ -256,20 +256,31 @@ const pickValue = (
   return undefined;
 };
 
-const getFirstJsonCandidate = (text: string): string | null => {
+const resolveFirstJsonStartIndex = (text: string): number => {
   const firstBraceIndex = text.indexOf("{");
   const firstBracketIndex = text.indexOf("[");
 
   if (firstBraceIndex === -1 && firstBracketIndex === -1) {
+    return -1;
+  }
+
+  if (firstBraceIndex === -1) {
+    return firstBracketIndex;
+  }
+
+  if (firstBracketIndex === -1) {
+    return firstBraceIndex;
+  }
+
+  return Math.min(firstBraceIndex, firstBracketIndex);
+};
+
+const getFirstJsonCandidate = (text: string): string | null => {
+  const startIndex = resolveFirstJsonStartIndex(text);
+  if (startIndex === -1) {
     return null;
   }
 
-  const startIndex =
-    firstBraceIndex === -1
-      ? firstBracketIndex
-      : firstBracketIndex === -1
-        ? firstBraceIndex
-        : Math.min(firstBraceIndex, firstBracketIndex);
   const openingChar = text[startIndex];
   const closingChar = openingChar === "{" ? "}" : "]";
 
@@ -431,7 +442,9 @@ const normalizeRecommendationOutput = (value: unknown): unknown => {
 
   if (Array.isArray(parsedValue)) {
     return {
-      recommendations: parsedValue.map((item) => normalizeRecommendationItem(item)),
+      recommendations: parsedValue.map((item) =>
+        normalizeRecommendationItem(item)
+      ),
       summary: "Ringkasan rekomendasi kampanye.",
     };
   }
@@ -464,12 +477,10 @@ const normalizeRecommendationOutput = (value: unknown): unknown => {
     "kesimpulan",
   ]);
 
-  const normalizedSummary =
-    typeof summaryRaw === "string"
-      ? summaryRaw
-      : Array.isArray(summaryRaw)
-        ? summaryRaw.map((item) => String(item)).join(" ")
-        : summaryRaw;
+  let normalizedSummary: unknown = summaryRaw;
+  if (Array.isArray(summaryRaw)) {
+    normalizedSummary = summaryRaw.map((item) => String(item)).join(" ");
+  }
 
   return {
     recommendations: Array.isArray(recommendationsRaw)
@@ -532,12 +543,19 @@ const buildDeterministicRecommendations = (
         1,
         Math.max(0, influencer.engagement_rate / 8)
       );
-      const budgetScore =
-        influencer.price_per_post <= campaign.budget
-          ? influencer.price_per_post <= budgetPerInfluencer
-            ? 1
-            : Math.max(0.4, 1 - (influencer.price_per_post - budgetPerInfluencer) / campaign.budget)
-          : 0;
+      let budgetScore = 0;
+      if (influencer.price_per_post <= campaign.budget) {
+        if (influencer.price_per_post <= budgetPerInfluencer) {
+          budgetScore = 1;
+        } else {
+          budgetScore = Math.max(
+            0.4,
+            1 -
+              (influencer.price_per_post - budgetPerInfluencer) /
+                campaign.budget
+          );
+        }
+      }
 
       const finalScore = Math.round(
         Math.min(
@@ -554,7 +572,9 @@ const buildDeterministicRecommendations = (
 
       const reasons: string[] = [];
       if (nicheOverlap > 0.25) {
-        reasons.push("Niche dan kategori konten relevan dengan kebutuhan kampanye.");
+        reasons.push(
+          "Niche dan kategori konten relevan dengan kebutuhan kampanye."
+        );
       }
       if (locationOverlap > 0.2) {
         reasons.push("Lokasi influencer sejalan dengan target pasar kampanye.");
@@ -565,10 +585,14 @@ const buildDeterministicRecommendations = (
         );
       }
       if (influencer.price_per_post <= campaign.budget) {
-        reasons.push("Estimasi biaya konten masih dalam rentang budget kampanye.");
+        reasons.push(
+          "Estimasi biaya konten masih dalam rentang budget kampanye."
+        );
       }
       if (reasons.length === 0) {
-        reasons.push("Profil influencer memiliki potensi menjangkau target audiens kampanye.");
+        reasons.push(
+          "Profil influencer memiliki potensi menjangkau target audiens kampanye."
+        );
       }
 
       return {

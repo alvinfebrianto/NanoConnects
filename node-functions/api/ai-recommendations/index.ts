@@ -1,4 +1,6 @@
+import { createError } from "evlog";
 import type { Influencer } from "../../../src/types";
+import { createNodeFunctionLogger, emitAndReturn } from "../../lib/evlog";
 import { createInMemoryRateLimiter } from "../../lib/rate-limiter";
 import { createSupabaseClient } from "../../lib/supabase-client";
 import {
@@ -232,8 +234,19 @@ const parseBearerToken = (
   return token;
 };
 
-const formatErrorResponse = (error: unknown): Response => {
-  console.error("AI Recommendations Error:", error);
+const formatErrorResponse = (
+  error: unknown,
+  log: ReturnType<typeof createNodeFunctionLogger>
+): Response => {
+  const structuredError = createError({
+    message: "Gagal membuat rekomendasi AI.",
+    status: 500,
+    why: error instanceof Error ? error.message : "Unknown internal error.",
+    fix: "Coba lagi beberapa saat lagi.",
+    cause: error instanceof Error ? error : undefined,
+  });
+
+  log.error(structuredError, { action: "generate-ai-recommendations" });
 
   const errorMessage =
     error instanceof Error ? error.message : "Terjadi kesalahan.";
@@ -396,22 +409,31 @@ export const createAiRecommendationsHandler = (
 ) =>
   async function onRequest(context: { request: Request }) {
     const { request } = context;
+    const log = createNodeFunctionLogger(request);
+    let response: Response;
 
     if (request.method !== "POST") {
-      return jsonResponse({ message: "Metode tidak diizinkan." }, 405);
+      response = jsonResponse({ message: "Metode tidak diizinkan." }, 405);
+      return emitAndReturn(log, response);
     }
 
     const accessToken = parseBearerToken(request.headers.get("Authorization"));
     if (!accessToken) {
-      return jsonResponse({ message: "Autentikasi diperlukan." }, 401);
+      response = jsonResponse({ message: "Autentikasi diperlukan." }, 401);
+      return emitAndReturn(log, response);
     }
 
     const dependencies = dependenciesFactory(accessToken);
 
     try {
-      return await processRecommendationRequest(request, dependencies);
+      response = await processRecommendationRequest(request, dependencies);
+      if (response.status === 200) {
+        log.set({ action: "generate-ai-recommendations" });
+      }
+      return emitAndReturn(log, response);
     } catch (error) {
-      return formatErrorResponse(error);
+      response = formatErrorResponse(error, log);
+      return emitAndReturn(log, response);
     }
   };
 

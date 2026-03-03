@@ -1,4 +1,9 @@
 import type { Influencer } from "../../../src/types";
+import {
+  createInternalServerError,
+  createNodeFunctionLogger,
+  emitAndReturn,
+} from "../../lib/evlog";
 import { createSupabaseClient } from "../../lib/supabase-client";
 import {
   attachPublicUserProfiles,
@@ -63,21 +68,31 @@ export const createFeaturedInfluencersHandler = (
 ) =>
   async function onRequest(context: { request: Request }) {
     const { request } = context;
+    const log = createNodeFunctionLogger(request);
+    let response: Response;
+
     if (request.method !== "GET") {
-      return jsonResponse({ message: "Metode tidak diizinkan." }, 405);
+      response = jsonResponse({ message: "Metode tidak diizinkan." }, 405);
+      return emitAndReturn(log, response);
     }
 
     try {
       const { getFeaturedInfluencers } = dependenciesFactory();
       const influencers = await getFeaturedInfluencers();
       const publicInfluencers = sanitizeInfluencersForPublic(influencers);
+      log.set({ influencers: { count: publicInfluencers.length } });
 
-      return jsonResponse({ data: publicInfluencers }, 200);
-    } catch (_error) {
-      return jsonResponse(
-        { message: "Terjadi kesalahan saat memuat influencer." },
-        500
+      response = jsonResponse({ data: publicInfluencers }, 200);
+      return emitAndReturn(log, response);
+    } catch (error) {
+      const structuredError = createInternalServerError(
+        error,
+        "Terjadi kesalahan saat memuat influencer.",
+        "Coba lagi beberapa saat lagi."
       );
+      log.error(structuredError, { action: "list-featured-influencers" });
+      response = jsonResponse({ message: structuredError.message }, 500);
+      return emitAndReturn(log, response);
     }
   };
 

@@ -1,4 +1,9 @@
 import type { Database } from "../../../src/lib/database.types";
+import {
+  createInternalServerError,
+  createNodeFunctionLogger,
+  emitAndReturn,
+} from "../../lib/evlog";
 import { createSupabaseClient } from "../../lib/supabase-client";
 import {
   PRIVATE_USER_PROFILE_SELECT,
@@ -218,20 +223,13 @@ const handleGetRequest = async (
   dependencies: ProfileHandlerDependencies,
   userId: string
 ) => {
-  try {
-    const result = await handleGetProfile(dependencies, userId);
+  const result = await handleGetProfile(dependencies, userId);
 
-    if (result.error) {
-      return jsonResponse({ message: result.error }, result.status);
-    }
-
-    return jsonResponse({ data: result.data }, result.status);
-  } catch {
-    return jsonResponse(
-      { message: "Terjadi kesalahan saat memuat profil." },
-      500
-    );
+  if (result.error) {
+    return jsonResponse({ message: result.error }, result.status);
   }
+
+  return jsonResponse({ data: result.data }, result.status);
 };
 
 const handlePatchRequest = async (
@@ -240,21 +238,13 @@ const handlePatchRequest = async (
   request: Request
 ) => {
   const payload = await parseProfilePayload(request);
+  const result = await handleUpdateProfile(dependencies, userId, payload);
 
-  try {
-    const result = await handleUpdateProfile(dependencies, userId, payload);
-
-    if (result.error) {
-      return jsonResponse({ message: result.error }, result.status);
-    }
-
-    return jsonResponse({ message: result.message }, result.status);
-  } catch {
-    return jsonResponse(
-      { message: "Terjadi kesalahan saat memperbarui profil." },
-      500
-    );
+  if (result.error) {
+    return jsonResponse({ message: result.error }, result.status);
   }
+
+  return jsonResponse({ message: result.message }, result.status);
 };
 
 export const createProfileHandler = (
@@ -262,28 +252,52 @@ export const createProfileHandler = (
 ) =>
   async function onRequest(context: { request: Request }) {
     const { request } = context;
+    const log = createNodeFunctionLogger(request);
+    let response: Response;
+
     const accessToken = parseBearerToken(request.headers.get("Authorization"));
 
     if (!accessToken) {
-      return jsonResponse({ message: "Autentikasi diperlukan." }, 401);
+      response = jsonResponse({ message: "Autentikasi diperlukan." }, 401);
+      return emitAndReturn(log, response);
     }
 
     const user = await getAuthUser(accessToken);
     if (!user) {
-      return jsonResponse({ message: "Autentikasi tidak valid." }, 401);
+      response = jsonResponse({ message: "Autentikasi tidak valid." }, 401);
+      return emitAndReturn(log, response);
     }
 
-    const dependencies = dependenciesFactory(accessToken);
+    try {
+      const dependencies = dependenciesFactory(accessToken);
 
-    if (request.method === "GET") {
-      return handleGetRequest(dependencies, user.id);
+      if (request.method === "GET") {
+        response = await handleGetRequest(dependencies, user.id);
+        return emitAndReturn(log, response);
+      }
+
+      if (request.method === "PATCH" || request.method === "PUT") {
+        response = await handlePatchRequest(dependencies, user.id, request);
+        return emitAndReturn(log, response);
+      }
+
+      response = jsonResponse({ message: "Metode tidak diizinkan." }, 405);
+      return emitAndReturn(log, response);
+    } catch (error) {
+      const isGetRequest = request.method === "GET";
+      const structuredError = createInternalServerError(
+        error,
+        isGetRequest
+          ? "Terjadi kesalahan saat memuat profil."
+          : "Terjadi kesalahan saat memperbarui profil.",
+        "Coba lagi beberapa saat lagi."
+      );
+      log.error(structuredError, {
+        action: isGetRequest ? "get-profile" : "update-profile",
+      });
+      response = jsonResponse({ message: structuredError.message }, 500);
+      return emitAndReturn(log, response);
     }
-
-    if (request.method === "PATCH" || request.method === "PUT") {
-      return handlePatchRequest(dependencies, user.id, request);
-    }
-
-    return jsonResponse({ message: "Metode tidak diizinkan." }, 405);
   };
 
 export const onRequest = createProfileHandler();
