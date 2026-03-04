@@ -1,12 +1,11 @@
-const PLATFORM_FEE_RATE = 0.1;
+import { calculateOrderPricing } from "@/lib/pricing";
 
 interface PriceBreakdownProps {
   basePrice: number;
 }
 
 export function PriceBreakdown({ basePrice }: PriceBreakdownProps) {
-  const platformFee = Math.round(basePrice * PLATFORM_FEE_RATE * 100) / 100;
-  const totalPrice = Math.round((basePrice + platformFee) * 100) / 100;
+  const { platformFee, total: totalPrice } = calculateOrderPricing(basePrice);
 
   return (
     <div className="space-y-3 rounded-xl bg-zinc-50 p-6 dark:bg-zinc-800">

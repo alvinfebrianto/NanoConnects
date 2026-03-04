@@ -16,6 +16,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/auth-context";
 import { useInfluencer } from "@/hooks/use-influencer";
+import { calculateOrderPricing } from "@/lib/pricing";
 import type { Influencer } from "@/types";
 
 const formatNumber = (num: number): string => {
@@ -173,6 +174,8 @@ function OrderCard({
   influencer: Influencer;
   onOrder: () => void;
 }) {
+  const pricing = calculateOrderPricing(influencer.price_per_post);
+
   return (
     <motion.div className="lg:col-span-1" variants={fadeUpItem}>
       <div className="sticky top-24 overflow-hidden rounded-[2.5rem] bg-white p-8 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] ring-1 ring-zinc-200/50 dark:bg-zinc-900 dark:ring-zinc-800">
@@ -186,7 +189,7 @@ function OrderCard({
               Harga per konten
             </span>
             <span className="font-bold font-display text-xl text-zinc-900 dark:text-white">
-              Rp {(influencer.price_per_post * 15_000).toLocaleString("id-ID")}
+              Rp {influencer.price_per_post.toLocaleString("id-ID")}
             </span>
           </div>
           <div className="flex items-center justify-between border-zinc-100 border-b pb-4 dark:border-zinc-800/50">
@@ -194,10 +197,7 @@ function OrderCard({
               Biaya platform (10%)
             </span>
             <span className="font-medium text-zinc-900 dark:text-zinc-300">
-              Rp{" "}
-              {(influencer.price_per_post * 15_000 * 0.1).toLocaleString(
-                "id-ID"
-              )}
+              Rp {pricing.platformFee.toLocaleString("id-ID")}
             </span>
           </div>
           <div className="flex items-center justify-between pt-2">
@@ -205,10 +205,7 @@ function OrderCard({
               Total Investasi
             </span>
             <span className="font-bold font-display text-2xl text-primary-600">
-              Rp{" "}
-              {(influencer.price_per_post * 15_000 * 1.1).toLocaleString(
-                "id-ID"
-              )}
+              Rp {pricing.total.toLocaleString("id-ID")}
             </span>
           </div>
         </div>

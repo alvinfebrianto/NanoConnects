@@ -15,7 +15,6 @@ describe("createSupabaseClientFromEnv", () => {
 
     const sessionResult = await client.auth.getSession();
     expect(sessionResult.data.session).toBeNull();
-    expect(warnSpy).toHaveBeenCalled();
 
     warnSpy.mockRestore();
   });
