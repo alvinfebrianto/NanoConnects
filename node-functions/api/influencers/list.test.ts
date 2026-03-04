@@ -173,11 +173,12 @@ describe("influencers list node function", () => {
     });
 
     it("memfilter influencer berdasarkan niche", async () => {
+      const listInfluencers = vi.fn(async () => [
+        mockInfluencers[0],
+        mockInfluencers[2],
+      ]);
       const handler = createInfluencersListHandler(() => ({
-        listInfluencers: async () =>
-          mockInfluencers.filter(
-            (inf) => inf.is_available && inf.niche === "Fashion & Gaya Hidup"
-          ),
+        listInfluencers,
       }));
 
       const response = await handler(
@@ -187,6 +188,9 @@ describe("influencers list node function", () => {
       );
       const payload = (await response.json()) as { data: Influencer[] };
 
+      expect(listInfluencers).toHaveBeenCalledWith(
+        expect.objectContaining({ niche: "Fashion & Gaya Hidup" })
+      );
       expect(response.status).toBe(200);
       expect(payload.data).toHaveLength(2);
       expect(

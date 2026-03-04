@@ -179,6 +179,8 @@ function OrderCard({
   influencer: Influencer;
   onOrder: () => void;
 }) {
+  const pricing = calculateOrderPricing(influencer.price_per_post);
+
   return (
     <motion.div className="lg:col-span-1" variants={fadeUpItem}>
       <div className="sticky top-24 overflow-hidden rounded-[2.5rem] bg-white p-8 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] ring-1 ring-zinc-200/50 dark:bg-zinc-900 dark:ring-zinc-800">
@@ -200,10 +202,7 @@ function OrderCard({
               Biaya platform (10%)
             </span>
             <span className="font-medium text-zinc-900 dark:text-zinc-300">
-              Rp{" "}
-              {calculateOrderPricing(
-                influencer.price_per_post
-              ).platformFee.toLocaleString("id-ID")}
+              Rp {pricing.platformFee.toLocaleString("id-ID")}
             </span>
           </div>
           <div className="flex items-center justify-between pt-2">
@@ -211,10 +210,7 @@ function OrderCard({
               Total Investasi
             </span>
             <span className="font-bold font-display text-2xl text-primary-600">
-              Rp{" "}
-              {calculateOrderPricing(
-                influencer.price_per_post
-              ).total.toLocaleString("id-ID")}
+              Rp {pricing.total.toLocaleString("id-ID")}
             </span>
           </div>
         </div>
