@@ -16,6 +16,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/auth-context";
 import { useInfluencer } from "@/hooks/use-influencer";
+import { calculateOrderPricing } from "@/lib/pricing";
 import type { Influencer } from "@/types";
 
 const formatNumber = (num: number): string => {
@@ -27,12 +28,6 @@ const formatNumber = (num: number): string => {
   }
   return num.toString();
 };
-
-export function calculateOrderPricing(pricePerPost: number) {
-  const platformFee = Math.round(pricePerPost * 0.1);
-  const total = pricePerPost + platformFee;
-  return { basePrice: pricePerPost, platformFee, total };
-}
 
 const staggerContainer = {
   hidden: { opacity: 0 },

@@ -1,6 +1,6 @@
 import { cleanup } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { calculateOrderPricing } from "./influencer-detail";
+import { calculateOrderPricing } from "@/lib/pricing";
 
 afterEach(cleanup);
 
