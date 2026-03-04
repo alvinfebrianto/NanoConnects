@@ -5,8 +5,8 @@ interface PriceBreakdownProps {
 }
 
 export function PriceBreakdown({ basePrice }: PriceBreakdownProps) {
-  const platformFee = Math.round(basePrice * PLATFORM_FEE_RATE * 100) / 100;
-  const totalPrice = Math.round((basePrice + platformFee) * 100) / 100;
+  const platformFee = Math.round(basePrice * PLATFORM_FEE_RATE);
+  const totalPrice = basePrice + platformFee;
 
   return (
     <div className="space-y-3 rounded-xl bg-zinc-50 p-6 dark:bg-zinc-800">

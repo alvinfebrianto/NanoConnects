@@ -29,7 +29,7 @@ const formatNumber = (num: number): string => {
 };
 
 export function calculateOrderPricing(pricePerPost: number) {
-  const platformFee = pricePerPost * 0.1;
+  const platformFee = Math.round(pricePerPost * 0.1);
   const total = pricePerPost + platformFee;
   return { basePrice: pricePerPost, platformFee, total };
 }
