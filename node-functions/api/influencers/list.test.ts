@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Influencer } from "../../../src/types";
 import { createInfluencersListHandler } from "./list";
 
@@ -195,8 +195,9 @@ describe("influencers list node function", () => {
     });
 
     it("memfilter influencer berdasarkan lokasi", async () => {
+      const listInfluencers = vi.fn(async () => [mockInfluencers[0]]);
       const handler = createInfluencersListHandler(() => ({
-        listInfluencers: async () => [mockInfluencers[0]],
+        listInfluencers,
       }));
 
       const response = await handler(
@@ -206,14 +207,21 @@ describe("influencers list node function", () => {
       );
       const payload = (await response.json()) as { data: Influencer[] };
 
+      expect(listInfluencers).toHaveBeenCalledWith(
+        expect.objectContaining({ location: "Jakarta" })
+      );
       expect(response.status).toBe(200);
       expect(payload.data).toHaveLength(1);
       expect(payload.data[0]?.location).toBe("Jakarta");
     });
 
     it("memfilter influencer berdasarkan rentang harga", async () => {
+      const listInfluencers = vi.fn(async () => [
+        mockInfluencers[0],
+        mockInfluencers[2],
+      ]);
       const handler = createInfluencersListHandler(() => ({
-        listInfluencers: async () => [mockInfluencers[0], mockInfluencers[2]],
+        listInfluencers,
       }));
 
       const response = await handler(
@@ -223,6 +231,9 @@ describe("influencers list node function", () => {
       );
       const payload = (await response.json()) as { data: Influencer[] };
 
+      expect(listInfluencers).toHaveBeenCalledWith(
+        expect.objectContaining({ minPrice: 400_000, maxPrice: 500_000 })
+      );
       expect(response.status).toBe(200);
       expect(payload.data).toHaveLength(2);
       expect(
@@ -234,8 +245,12 @@ describe("influencers list node function", () => {
     });
 
     it("memfilter influencer berdasarkan status verifikasi", async () => {
+      const listInfluencers = vi.fn(async () => [
+        mockInfluencers[0],
+        mockInfluencers[1],
+      ]);
       const handler = createInfluencersListHandler(() => ({
-        listInfluencers: async () => [mockInfluencers[0], mockInfluencers[1]],
+        listInfluencers,
       }));
 
       const response = await handler(
@@ -245,6 +260,9 @@ describe("influencers list node function", () => {
       );
       const payload = (await response.json()) as { data: Influencer[] };
 
+      expect(listInfluencers).toHaveBeenCalledWith(
+        expect.objectContaining({ verificationStatus: "verified" })
+      );
       expect(response.status).toBe(200);
       expect(payload.data).toHaveLength(2);
       expect(
@@ -253,8 +271,9 @@ describe("influencers list node function", () => {
     });
 
     it("menggabungkan beberapa filter sekaligus", async () => {
+      const listInfluencers = vi.fn(async () => [mockInfluencers[0]]);
       const handler = createInfluencersListHandler(() => ({
-        listInfluencers: async () => [mockInfluencers[0]],
+        listInfluencers,
       }));
 
       const response = await handler(
@@ -264,6 +283,13 @@ describe("influencers list node function", () => {
       );
       const payload = (await response.json()) as { data: Influencer[] };
 
+      expect(listInfluencers).toHaveBeenCalledWith(
+        expect.objectContaining({
+          niche: "Fashion & Gaya Hidup",
+          location: "Jakarta",
+          verificationStatus: "verified",
+        })
+      );
       expect(response.status).toBe(200);
       expect(payload.data).toHaveLength(1);
       expect(payload.data[0]?.niche).toBe("Fashion & Gaya Hidup");
