@@ -186,8 +186,8 @@ const buildOrderInsert = (
   userId: string,
   price: number
 ): OrderInsert => {
-  const platformFee = Math.round(price * PLATFORM_FEE_RATE * 100) / 100;
-  const totalPrice = Math.round((price + platformFee) * 100) / 100;
+  const platformFee = Math.round(price * PLATFORM_FEE_RATE);
+  const totalPrice = price + platformFee;
 
   return {
     influencer_id: payload.influencerId,
