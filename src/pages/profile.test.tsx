@@ -83,7 +83,7 @@ describe("Profile Page", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Test User")).toBeDefined();
-      expect(screen.getByText("Business Owner")).toBeDefined();
+      expect(screen.getByText("Pemilik Bisnis")).toBeDefined();
       expect(screen.getByText("test@example.com")).toBeDefined();
     });
   });
@@ -101,9 +101,9 @@ describe("Profile Page", () => {
 
     await waitFor(() => {
       // Use regex to match 10,000 or 10.000
-      expect(screen.getByText(/10[.,]000/)).toBeDefined(); // Followers
-      expect(screen.getByText("5.5%")).toBeDefined(); // Engagement
-      expect(screen.getByText(/500k/)).toBeDefined(); // Price
+      expect(screen.getByText(/10[.,]000/)).toBeDefined(); // Pengikut
+      expect(screen.getByText("5.5%")).toBeDefined(); // Tingkat Interaksi
+      expect(screen.getByText(/500k/)).toBeDefined(); // Harga per Post
     });
   });
 
@@ -118,14 +118,14 @@ describe("Profile Page", () => {
     renderProfile();
 
     await waitFor(() => {
-       const buttons = screen.getAllByText("Edit Profile");
+       const buttons = screen.getAllByText("Edit Profil");
        expect(buttons.length).toBeGreaterThan(0);
     });
 
-    const editButtons = screen.getAllByText("Edit Profile");
+    const editButtons = screen.getAllByText("Edit Profil");
     fireEvent.click(editButtons[0]);
 
-    const nameInput = screen.getByPlaceholderText("Your Name");
+    const nameInput = screen.getByPlaceholderText("Nama Anda");
     fireEvent.change(nameInput, { target: { value: "Updated Name" } });
 
     expect(nameInput.closest('input')?.value).toBe("Updated Name");
@@ -136,7 +136,7 @@ describe("Profile Page", () => {
       json: async () => ({ message: "Success" }),
     });
 
-    fireEvent.click(screen.getByText("Save"));
+    fireEvent.click(screen.getByText("Simpan"));
 
     await waitFor(() => {
       expect(screen.getByText("Profil berhasil diperbarui!")).toBeDefined();

@@ -81,7 +81,7 @@ export function useFilters(): UseFiltersReturn {
     if (filters.minPrice !== undefined && filters.minPrice > 0) {
       result.minPrice = filters.minPrice;
     }
-    if (filters.maxPrice !== undefined && filters.maxPrice > 0) {
+    if (filters.maxPrice !== undefined && filters.maxPrice !== FILTER_DEFAULTS.MAX_PRICE) {
       result.maxPrice = filters.maxPrice;
     }
     if (filters.verificationStatus && filters.verificationStatus !== FILTER_DEFAULTS.VERIFICATION_STATUS) {
@@ -99,6 +99,7 @@ export function useFilters(): UseFiltersReturn {
     (filters.niche !== FILTER_DEFAULTS.NICHE ? 1 : 0) +
     (filters.location !== FILTER_DEFAULTS.LOCATION ? 1 : 0) +
     (filters.verificationStatus !== FILTER_DEFAULTS.VERIFICATION_STATUS ? 1 : 0) +
+    (filters.minPrice !== 0 ? 1 : 0) +
     (filters.maxPrice !== FILTER_DEFAULTS.MAX_PRICE ? 1 : 0);
 
   return {
