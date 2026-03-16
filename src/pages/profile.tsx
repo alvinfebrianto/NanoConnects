@@ -55,7 +55,7 @@ function StatusBadge({
 }) {
   let colorClass = "";
   let label = "";
-  let Icon = ShieldCheck;
+  const Icon = ShieldCheck;
 
   if (type === "account") {
     switch (status) {
@@ -486,7 +486,7 @@ export function Profile() {
                       colorClass="bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400"
                     />
                   </>
-                ) : (
+                ) : user.user_type === "influencer" ? (
                   <>
                     <MenuLink
                       to="/influencers"
@@ -496,7 +496,7 @@ export function Profile() {
                     />
                      {/* Add more influencer specific links here later */}
                   </>
-                )}
+                ) : null}
               </div>
             </motion.div>
 
