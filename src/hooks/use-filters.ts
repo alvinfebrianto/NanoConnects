@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { FilterOptions } from "@/types";
 import { FILTER_DEFAULTS } from "@/lib/constants";
+import type { FilterOptions } from "@/types";
 
 interface UseFiltersReturn {
   searchQuery: string;
@@ -29,9 +29,7 @@ export function useFilters(): UseFiltersReturn {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
 
-  const [searchQuery, setSearchQuery] = useState(
-    searchParams.get("q") || ""
-  );
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
 
   const [filters, setFilters] = useState<FilterOptions>({
     niche: searchParams.get("niche") || FILTER_DEFAULTS.NICHE,
@@ -41,7 +39,8 @@ export function useFilters(): UseFiltersReturn {
     verificationStatus:
       (searchParams.get(
         "verificationStatus"
-      ) as FilterOptions["verificationStatus"]) || FILTER_DEFAULTS.VERIFICATION_STATUS,
+      ) as FilterOptions["verificationStatus"]) ||
+      FILTER_DEFAULTS.VERIFICATION_STATUS,
   });
 
   // Sync filters with URL params
@@ -59,10 +58,16 @@ export function useFilters(): UseFiltersReturn {
     if (filters.minPrice !== undefined && filters.minPrice > 0) {
       params.set("minPrice", String(filters.minPrice));
     }
-    if (filters.maxPrice !== undefined && filters.maxPrice !== FILTER_DEFAULTS.MAX_PRICE) {
+    if (
+      filters.maxPrice !== undefined &&
+      filters.maxPrice !== FILTER_DEFAULTS.MAX_PRICE
+    ) {
       params.set("maxPrice", String(filters.maxPrice));
     }
-    if (filters.verificationStatus && filters.verificationStatus !== FILTER_DEFAULTS.VERIFICATION_STATUS) {
+    if (
+      filters.verificationStatus &&
+      filters.verificationStatus !== FILTER_DEFAULTS.VERIFICATION_STATUS
+    ) {
       params.set("verificationStatus", filters.verificationStatus);
     }
 
@@ -81,10 +86,16 @@ export function useFilters(): UseFiltersReturn {
     if (filters.minPrice !== undefined && filters.minPrice > 0) {
       result.minPrice = filters.minPrice;
     }
-    if (filters.maxPrice !== undefined && filters.maxPrice !== FILTER_DEFAULTS.MAX_PRICE) {
+    if (
+      filters.maxPrice !== undefined &&
+      filters.maxPrice !== FILTER_DEFAULTS.MAX_PRICE
+    ) {
       result.maxPrice = filters.maxPrice;
     }
-    if (filters.verificationStatus && filters.verificationStatus !== FILTER_DEFAULTS.VERIFICATION_STATUS) {
+    if (
+      filters.verificationStatus &&
+      filters.verificationStatus !== FILTER_DEFAULTS.VERIFICATION_STATUS
+    ) {
       result.verificationStatus = filters.verificationStatus;
     }
     return result;
@@ -96,11 +107,13 @@ export function useFilters(): UseFiltersReturn {
   };
 
   const activeFiltersCount =
-    (filters.niche !== FILTER_DEFAULTS.NICHE ? 1 : 0) +
-    (filters.location !== FILTER_DEFAULTS.LOCATION ? 1 : 0) +
-    (filters.verificationStatus !== FILTER_DEFAULTS.VERIFICATION_STATUS ? 1 : 0) +
-    (filters.minPrice !== 0 ? 1 : 0) +
-    (filters.maxPrice !== FILTER_DEFAULTS.MAX_PRICE ? 1 : 0);
+    (filters.niche === FILTER_DEFAULTS.NICHE ? 0 : 1) +
+    (filters.location === FILTER_DEFAULTS.LOCATION ? 0 : 1) +
+    (filters.verificationStatus === FILTER_DEFAULTS.VERIFICATION_STATUS
+      ? 0
+      : 1) +
+    (filters.minPrice === 0 ? 0 : 1) +
+    (filters.maxPrice === FILTER_DEFAULTS.MAX_PRICE ? 0 : 1);
 
   return {
     searchQuery,

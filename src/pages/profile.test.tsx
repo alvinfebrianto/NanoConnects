@@ -1,9 +1,9 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
-import { Profile } from "./profile";
-import { useAuth } from "@/contexts/auth-context";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
+import { useAuth } from "@/contexts/auth-context";
 import { supabase } from "@/lib/supabase";
+import { Profile } from "./profile";
 
 // Mock Supabase
 vi.mock("@/lib/supabase", () => ({
@@ -39,9 +39,9 @@ const mockUser = {
 const mockInfluencerProfile = {
   id: "inf-123",
   user_id: "user-123",
-  followers_count: 10000,
+  followers_count: 10_000,
   engagement_rate: 5.5,
-  price_per_post: 500000,
+  price_per_post: 500_000,
   location: "Jakarta",
   niche: "Lifestyle",
   verification_status: "verified",
@@ -49,7 +49,7 @@ const mockInfluencerProfile = {
 
 const renderProfile = (user = mockUser) => {
   (useAuth as Mock).mockReturnValue({
-    user: user,
+    user,
     isLoading: false,
     login: vi.fn(),
     register: vi.fn(),
@@ -93,7 +93,10 @@ describe("Profile Page", () => {
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        data: { user: influencerUser, influencerProfile: mockInfluencerProfile },
+        data: {
+          user: influencerUser,
+          influencerProfile: mockInfluencerProfile,
+        },
       }),
     });
 
@@ -118,8 +121,8 @@ describe("Profile Page", () => {
     renderProfile();
 
     await waitFor(() => {
-       const buttons = screen.getAllByText("Edit Profil");
-       expect(buttons.length).toBeGreaterThan(0);
+      const buttons = screen.getAllByText("Edit Profil");
+      expect(buttons.length).toBeGreaterThan(0);
     });
 
     const editButtons = screen.getAllByText("Edit Profil");
@@ -128,7 +131,7 @@ describe("Profile Page", () => {
     const nameInput = screen.getByPlaceholderText("Nama Anda");
     fireEvent.change(nameInput, { target: { value: "Updated Name" } });
 
-    expect(nameInput.closest('input')?.value).toBe("Updated Name");
+    expect(nameInput.closest("input")?.value).toBe("Updated Name");
 
     // Mock save response
     (global.fetch as any).mockResolvedValueOnce({
@@ -143,4 +146,3 @@ describe("Profile Page", () => {
     });
   });
 });
-
