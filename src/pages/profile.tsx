@@ -14,6 +14,7 @@ import {
   User as UserIcon,
   Users,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
@@ -27,7 +28,7 @@ import type { Influencer, User as UserType } from "@/types";
 function getUserTypeLabel(type: string): string {
   switch (type) {
     case "sme":
-      return "Business Owner";
+      return "Pemilik Bisnis";
     case "influencer":
       return "Influencer";
     default:
@@ -61,17 +62,17 @@ function StatusBadge({
       case "active":
         colorClass =
           "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30";
-        label = "Active";
+        label = "Aktif";
         break;
       case "inactive":
         colorClass =
           "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-500/30";
-        label = "Inactive";
+        label = "Tidak Aktif";
         break;
       default:
         colorClass =
           "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 border-rose-200 dark:border-rose-500/30";
-        label = "Suspended";
+        label = "Ditangguhkan";
         break;
     }
   } else {
@@ -79,17 +80,17 @@ function StatusBadge({
       case "verified":
         colorClass =
           "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-500/30";
-        label = "Verified";
+        label = "Terverifikasi";
         break;
       case "pending":
         colorClass =
           "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-500/30";
-        label = "Pending";
+        label = "Menunggu";
         break;
       default:
         colorClass =
           "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700";
-        label = "Unverified";
+        label = "Belum Terverifikasi";
         break;
     }
   }
@@ -111,7 +112,7 @@ function StatCard({
   subtext,
   delay = 0,
 }: {
-  icon: any;
+  icon: LucideIcon;
   label: string;
   value: string | number;
   subtext?: string;
@@ -156,7 +157,7 @@ function MenuLink({
   colorClass = "bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400",
 }: {
   to: string;
-  icon: any;
+  icon: LucideIcon;
   title: string;
   description: string;
   colorClass?: string;
@@ -271,10 +272,11 @@ export function Profile() {
         error: "",
         success: "Profil berhasil diperbarui!",
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Terjadi kesalahan.";
       setEditState((prev) => ({
         ...prev,
-        error: err.message || "Terjadi kesalahan.",
+        error: errorMessage,
       }));
     } finally {
       setIsLoading(false);
@@ -337,7 +339,7 @@ export function Profile() {
                       value={formData.name}
                       onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                       className="mb-2 w-full rounded-lg border border-zinc-200 px-3 py-1.5 text-center font-bold text-lg focus:border-primary-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
-                      placeholder="Your Name"
+                      placeholder="Nama Anda"
                     />
                   ) : (
                     <h2 className="mb-1 font-display font-bold text-2xl text-zinc-900 dark:text-white">
@@ -358,11 +360,11 @@ export function Profile() {
                       value={formData.bio}
                       onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
                       className="mb-6 h-24 w-full resize-none rounded-lg border border-zinc-200 p-3 text-sm focus:border-primary-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-                      placeholder="Tell us about yourself..."
+                      placeholder="Ceritakan tentang diri Anda..."
                     />
                   ) : (
                     <p className="mb-6 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
-                      {user.bio || "No bio yet."}
+                      {user.bio || "Belum ada bio."}
                     </p>
                   )}
 
@@ -373,14 +375,14 @@ export function Profile() {
                           onClick={() => setEditState(prev => ({ ...prev, isEditing: false }))}
                           className="flex-1 rounded-xl border border-zinc-200 py-2.5 font-medium text-sm text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
                         >
-                          Cancel
+                          Batal
                         </button>
                         <button
                           onClick={handleSave}
                           disabled={isLoading}
                           className="flex-1 rounded-xl bg-primary-600 py-2.5 font-medium text-sm text-white shadow-sm hover:bg-primary-700 disabled:opacity-50"
                         >
-                          {isLoading ? "Saving..." : "Save"}
+                          {isLoading ? "Menyimpan..." : "Simpan"}
                         </button>
                       </>
                     ) : (
@@ -388,7 +390,7 @@ export function Profile() {
                         onClick={() => setEditState(prev => ({ ...prev, isEditing: true }))}
                         className="flex-1 rounded-xl border border-zinc-200 py-2.5 font-medium text-sm text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
                       >
-                        Edit Profile
+                        Edit Profil
                       </button>
                     )}
                   </div>
@@ -401,7 +403,7 @@ export function Profile() {
                   className="flex w-full items-center justify-center gap-2 rounded-2xl p-3 font-medium text-red-600 text-sm transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/10"
                 >
                   <LogOut className="h-4 w-4" />
-                  Sign Out
+                  Keluar
                 </button>
               </div>
             </div>
@@ -436,21 +438,21 @@ export function Profile() {
             {isInfluencer && influencerProfile && (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <StatCard
-                  label="Followers"
+                  label="Pengikut"
                   value={influencerProfile.followers_count.toLocaleString()}
                   icon={Users}
                   delay={0.1}
                 />
                 <StatCard
-                  label="Engagement Rate"
+                  label="Tingkat Interaksi"
                   value={`${influencerProfile.engagement_rate}%`}
                   icon={Sparkles}
                   delay={0.2}
                 />
                 <StatCard
-                  label="Price per Post"
+                  label="Harga per Post"
                   value={`Rp ${(influencerProfile.price_per_post / 1000).toFixed(0)}k`}
-                  subtext="Starting from"
+                  subtext="Mulai dari"
                   icon={CreditCard}
                   delay={0.3}
                 />
@@ -464,22 +466,22 @@ export function Profile() {
               transition={{ delay: 0.4 }}
             >
               <h3 className="mb-4 font-semibold text-lg text-zinc-900 dark:text-white">
-                Quick Actions
+                Aksi Cepat
               </h3>
               <div className="grid gap-4 md:grid-cols-2">
                 {user.user_type === "sme" ? (
                   <>
                     <MenuLink
                       to="/influencers"
-                      title="Find Influencers"
-                      description="Browse and connect with creators"
+                      title="Cari Influencer"
+                      description="Jelajahi dan hubungi kreator"
                       icon={Star}
                       colorClass="bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400"
                     />
                     <MenuLink
                       to="/ai-recommendations"
-                      title="AI Recommendations"
-                      description="Get smart matches for your brand"
+                      title="Rekomendasi AI"
+                      description="Dapatkan rekomendasi yang sesuai untuk brand Anda"
                       icon={Sparkles}
                       colorClass="bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400"
                     />
@@ -488,8 +490,8 @@ export function Profile() {
                   <>
                     <MenuLink
                       to="/influencers"
-                      title="View My Profile"
-                      description="See how your profile looks to others"
+                      title="Lihat Profil Saya"
+                      description="Lihat bagaimana profil Anda terlihat oleh orang lain"
                       icon={UserIcon}
                     />
                      {/* Add more influencer specific links here later */}
@@ -507,12 +509,12 @@ export function Profile() {
                 className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800"
               >
                 <h3 className="mb-4 font-semibold text-lg text-zinc-900 dark:text-white">
-                  Contact Information
+                  Informasi Kontak
                 </h3>
                 <div className="space-y-4">
                   <div>
                     <label className="mb-1 block text-xs text-zinc-500 dark:text-zinc-400">
-                      Email Address
+                      Alamat Email
                     </label>
                     <div className="flex items-center gap-2 font-medium text-zinc-900 dark:text-zinc-200">
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
@@ -523,7 +525,7 @@ export function Profile() {
                   </div>
                   <div>
                     <label className="mb-1 block text-xs text-zinc-500 dark:text-zinc-400">
-                      Phone Number
+                      Nomor Telepon
                     </label>
                     {editState.isEditing ? (
                       <input
@@ -538,14 +540,14 @@ export function Profile() {
                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                           <Phone className="h-4 w-4" />
                         </div>
-                        {user.phone || "Not set"}
+                        {user.phone || "Belum diatur"}
                       </div>
                     )}
                   </div>
                   {isInfluencer && influencerProfile && (
                      <div>
                       <label className="mb-1 block text-xs text-zinc-500 dark:text-zinc-400">
-                        Location
+                        Lokasi
                       </label>
                       <div className="flex items-center gap-2 font-medium text-zinc-900 dark:text-zinc-200">
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
@@ -565,27 +567,27 @@ export function Profile() {
                 className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800"
               >
                 <h3 className="mb-4 font-semibold text-lg text-zinc-900 dark:text-white">
-                  Account Status
+                  Status Akun
                 </h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between border-b border-zinc-100 pb-3 last:border-0 last:pb-0 dark:border-zinc-800">
-                    <span className="text-sm text-zinc-600 dark:text-zinc-400">Account Status</span>
+                    <span className="text-sm text-zinc-600 dark:text-zinc-400">Status Akun</span>
                     <StatusBadge status={user.status} type="account" />
                   </div>
                   <div className="flex items-center justify-between border-b border-zinc-100 pb-3 last:border-0 last:pb-0 dark:border-zinc-800">
-                    <span className="text-sm text-zinc-600 dark:text-zinc-400">Email Verification</span>
+                    <span className="text-sm text-zinc-600 dark:text-zinc-400">Verifikasi Email</span>
                      <StatusBadge status={user.email_verified ? 'verified' : 'pending'} type="verification" />
                   </div>
                   <div className="flex items-center justify-between border-b border-zinc-100 pb-3 last:border-0 last:pb-0 dark:border-zinc-800">
-                    <span className="text-sm text-zinc-600 dark:text-zinc-400">Member Since</span>
+                    <span className="text-sm text-zinc-600 dark:text-zinc-400">Anggota Sejak</span>
                     <span className="font-medium text-sm text-zinc-900 dark:text-zinc-200">
                       {formatDate(user.created_at)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between border-b border-zinc-100 pb-3 last:border-0 last:pb-0 dark:border-zinc-800">
-                    <span className="text-sm text-zinc-600 dark:text-zinc-400">Last Login</span>
+                    <span className="text-sm text-zinc-600 dark:text-zinc-400">Login Terakhir</span>
                     <span className="font-medium text-sm text-zinc-900 dark:text-zinc-200">
-                      {user.last_login_at ? formatDate(user.last_login_at) : "Never"}
+                      {user.last_login_at ? formatDate(user.last_login_at) : "Belum pernah"}
                     </span>
                   </div>
                 </div>

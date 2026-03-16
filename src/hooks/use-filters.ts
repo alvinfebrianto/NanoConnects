@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { FilterOptions } from "@/types";
 import { FILTER_DEFAULTS } from "@/lib/constants";
@@ -45,7 +45,7 @@ export function useFilters(): UseFiltersReturn {
   });
 
   // Sync filters with URL params
-  useMemo(() => {
+  useEffect(() => {
     const params = new URLSearchParams();
     if (searchQuery) {
       params.set("q", searchQuery);
