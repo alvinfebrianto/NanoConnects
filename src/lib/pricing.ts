@@ -1,4 +1,4 @@
-export const PLATFORM_FEE_RATE = 0.1;
+import { PLATFORM_FEE_RATE } from "./constants";
 
 export function calculateOrderPricing(pricePerPost: number) {
   const platformFee = Math.round(pricePerPost * PLATFORM_FEE_RATE);

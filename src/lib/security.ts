@@ -1,3 +1,5 @@
+import { VALIDATION } from "./constants";
+
 export function sanitizeInput(input: string): string {
   if (!input) {
     return "";
@@ -23,7 +25,7 @@ export function validatePassword(password: string): {
   valid: boolean;
   error?: string;
 } {
-  if (!password || password.length < 6) {
+  if (!password || password.length < VALIDATION.PASSWORD_MIN_LENGTH) {
     return { valid: false, error: "Kata sandi minimal 6 karakter" };
   }
 

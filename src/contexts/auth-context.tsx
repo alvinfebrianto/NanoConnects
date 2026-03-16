@@ -31,6 +31,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const USER_SELECT_FIELDS =
+  "id,name,email,user_type,avatar_url,bio,phone,email_verified,status,last_login_at,created_at,updated_at" as const;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,9 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data, error } = await supabase
         .from("users")
-        .select(
-          "id,name,email,user_type,avatar_url,bio,phone,email_verified,status,last_login_at,created_at,updated_at"
-        )
+        .select(USER_SELECT_FIELDS)
         .eq("id", userId)
         .single();
 
@@ -95,18 +96,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [checkUser, fetchUser]);
 
   async function login(email: string, password: string) {
-    const emailValidation = validateRequired(email, "Email");
-    if (!emailValidation.valid) {
-      throw new Error(emailValidation.error);
-    }
-
-    if (!validateEmail(email)) {
-      throw new Error("Masukkan alamat email yang valid");
-    }
-
-    const passwordValidation = validatePassword(password);
-    if (!passwordValidation.valid) {
-      throw new Error(passwordValidation.error);
+    const emailError = validateAuthInput(email, password);
+    if (emailError) {
+      throw new Error(emailError);
     }
 
     const { error } = await supabase.auth.signInWithPassword({
@@ -134,18 +126,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error("Nama minimal 2 karakter");
     }
 
-    const emailValidation = validateRequired(email, "Email");
-    if (!emailValidation.valid) {
-      throw new Error(emailValidation.error);
-    }
-
-    if (!validateEmail(email)) {
-      throw new Error("Masukkan alamat email yang valid");
-    }
-
-    const passwordValidation = validatePassword(password);
-    if (!passwordValidation.valid) {
-      throw new Error(passwordValidation.error);
+    const emailError = validateAuthInput(email, password);
+    if (emailError) {
+      throw new Error(emailError);
     }
 
     if (!validateUserType(userType)) {
@@ -184,6 +167,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
+}
+
+function validateAuthInput(
+  email: string,
+  password: string
+): string | undefined {
+  const emailValidation = validateRequired(email, "Email");
+  if (!emailValidation.valid) {
+    return emailValidation.error;
+  }
+
+  if (!validateEmail(email)) {
+    return "Masukkan alamat email yang valid";
+  }
+
+  const passwordValidation = validatePassword(password);
+  if (!passwordValidation.valid) {
+    return passwordValidation.error;
+  }
+
+  return undefined;
 }
 
 export function useAuth() {
