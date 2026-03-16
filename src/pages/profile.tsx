@@ -269,8 +269,14 @@ export function Profile() {
       });
 
       if (!response.ok) {
-        const payload = await response.json();
-        throw new Error(payload.message || "Gagal menyimpan perubahan.");
+        const payload = (await response.json().catch(() => null)) as
+          | { message?: string }
+          | null;
+        setEditState((prev) => ({
+          ...prev,
+          error: payload?.message || "Gagal menyimpan perubahan.",
+        }));
+        return;
       }
 
       setEditState({
@@ -278,12 +284,10 @@ export function Profile() {
         error: "",
         success: "Profil berhasil diperbarui!",
       });
-    } catch (err: unknown) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Terjadi kesalahan.";
+    } catch {
       setEditState((prev) => ({
         ...prev,
-        error: errorMessage,
+        error: "Terjadi kesalahan. Silakan coba lagi.",
       }));
     } finally {
       setIsLoading(false);
@@ -484,7 +488,9 @@ export function Profile() {
                   icon={CreditCard}
                   label="Harga per Post"
                   subtext="Mulai dari"
-                  value={`Rp ${(influencerProfile.price_per_post / 1000).toFixed(0)}k`}
+                  value={`Rp ${influencerProfile.price_per_post.toLocaleString(
+                    "id-ID"
+                  )}`}
                 />
               </div>
             )}
