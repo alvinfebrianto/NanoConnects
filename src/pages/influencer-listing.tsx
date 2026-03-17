@@ -219,10 +219,10 @@ export function InfluencerListing() {
   };
 
   const activeFiltersCount =
-    (filters.niche !== "Semua Niche" ? 1 : 0) +
-    (filters.location !== "Semua Lokasi" ? 1 : 0) +
-    (filters.verificationStatus !== "all" ? 1 : 0) +
-    (filters.maxPrice !== 10_000_000 ? 1 : 0);
+    (filters.niche === "Semua Niche" ? 0 : 1) +
+    (filters.location === "Semua Lokasi" ? 0 : 1) +
+    (filters.verificationStatus === "all" ? 0 : 1) +
+    (filters.maxPrice === 10_000_000 ? 0 : 1);
 
   return (
     <div className="min-h-[100dvh] bg-zinc-50 pb-24 dark:bg-zinc-950">
