@@ -106,7 +106,7 @@ describe("Profile Page", () => {
       // Use regex to match 10,000 or 10.000
       expect(screen.getByText(/10[.,]000/)).toBeDefined(); // Pengikut
       expect(screen.getByText("5.5%")).toBeDefined(); // Tingkat Interaksi
-      expect(screen.getByText(/500k/)).toBeDefined(); // Harga per Post
+      expect(screen.getByText(/500[.,]000/)).toBeDefined(); // Harga per Post
     });
   });
 
