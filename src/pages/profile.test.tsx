@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { useAuth } from "@/contexts/auth-context";
 import { supabase } from "@/lib/supabase";
 import { Profile } from "./profile";
@@ -65,6 +65,7 @@ const renderProfile = (user = mockUser) => {
 
 describe("Profile Page", () => {
   beforeEach(() => {
+    cleanup();
     vi.clearAllMocks();
     (supabase.auth.getSession as any).mockResolvedValue({
       data: { session: { access_token: "mock-token" } },
@@ -84,7 +85,7 @@ describe("Profile Page", () => {
     await waitFor(() => {
       expect(screen.getByText("Test User")).toBeDefined();
       expect(screen.getByText("Pemilik Bisnis")).toBeDefined();
-      expect(screen.getByText("test@example.com")).toBeDefined();
+      expect(screen.getAllByText("test@example.com").length).toBeGreaterThan(0);
     });
   });
 
@@ -93,20 +94,16 @@ describe("Profile Page", () => {
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        data: {
-          user: influencerUser,
-          influencerProfile: mockInfluencerProfile,
-        },
+        data: { user: influencerUser, influencerProfile: mockInfluencerProfile },
       }),
     });
 
     renderProfile(influencerUser);
 
     await waitFor(() => {
-      // Use regex to match 10,000 or 10.000
-      expect(screen.getByText(/10[.,]000/)).toBeDefined(); // Pengikut
-      expect(screen.getByText("5.5%")).toBeDefined(); // Tingkat Interaksi
-      expect(screen.getByText(/500[.,]000/)).toBeDefined(); // Harga per Post
+      expect(screen.getByText(/10[.,]000/)).toBeDefined();
+      expect(screen.getByText("5.5%")).toBeDefined();
+      expect(screen.getByText(/500[.,]000/)).toBeDefined();
     });
   });
 
@@ -121,17 +118,15 @@ describe("Profile Page", () => {
     renderProfile();
 
     await waitFor(() => {
-      const buttons = screen.getAllByText("Edit Profil");
-      expect(buttons.length).toBeGreaterThan(0);
+      expect(screen.getByText("Edit Profil")).toBeDefined();
     });
 
-    const editButtons = screen.getAllByText("Edit Profil");
-    fireEvent.click(editButtons[0]);
+    fireEvent.click(screen.getByText("Edit Profil"));
 
     const nameInput = screen.getByPlaceholderText("Nama Anda");
     fireEvent.change(nameInput, { target: { value: "Updated Name" } });
 
-    expect(nameInput.closest("input")?.value).toBe("Updated Name");
+    expect((nameInput as HTMLInputElement).value).toBe("Updated Name");
 
     // Mock save response
     (global.fetch as any).mockResolvedValueOnce({
@@ -139,10 +134,10 @@ describe("Profile Page", () => {
       json: async () => ({ message: "Success" }),
     });
 
-    fireEvent.click(screen.getByText("Simpan"));
+    fireEvent.click(screen.getByText("Simpan Perubahan"));
 
     await waitFor(() => {
-      expect(screen.getByText("Profil berhasil diperbarui!")).toBeDefined();
+      expect(screen.getByText("Profil diperbarui.")).toBeDefined();
     });
   });
 });
