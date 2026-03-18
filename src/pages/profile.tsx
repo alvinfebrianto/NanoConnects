@@ -3,7 +3,6 @@ import {
   Building2,
   Camera,
   CheckCircle2,
-  ChevronRight,
   CreditCard,
   LogOut,
   type LucideIcon,
@@ -18,7 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth-context";
 import { supabase } from "@/lib/supabase";
 import type { Influencer, User as UserType } from "@/types";
@@ -146,42 +145,6 @@ function StatCard({
         </div>
       </div>
     </motion.div>
-  );
-}
-
-function MenuLink({
-  to,
-  icon: Icon,
-  title,
-  description,
-  colorClass = "bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400",
-}: {
-  to: string;
-  icon: LucideIcon;
-  title: string;
-  description: string;
-  colorClass?: string;
-}) {
-  return (
-    <Link
-      className="group relative flex items-center gap-4 overflow-hidden rounded-2xl border border-zinc-100 bg-white p-4 shadow-sm transition-all hover:border-primary-200 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-primary-900"
-      to={to}
-    >
-      <div
-        className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-110 ${colorClass}`}
-      >
-        <Icon className="h-6 w-6" />
-      </div>
-      <div className="flex-1">
-        <h4 className="font-semibold text-zinc-900 transition-colors group-hover:text-primary-600 dark:text-white dark:group-hover:text-primary-400">
-          {title}
-        </h4>
-        <p className="line-clamp-1 text-sm text-zinc-500 dark:text-zinc-400">
-          {description}
-        </p>
-      </div>
-      <ChevronRight className="h-5 w-5 text-zinc-300 transition-transform group-hover:translate-x-1 dark:text-zinc-600" />
-    </Link>
   );
 }
 
@@ -495,48 +458,7 @@ export function Profile() {
               </div>
             )}
 
-            {/* Menu Grid */}
-            <motion.div
-              animate={{ opacity: 1, y: 0 }}
-              initial={{ opacity: 0, y: 20 }}
-              transition={{ delay: 0.4 }}
-            >
-              <h3 className="mb-4 font-semibold text-lg text-zinc-900 dark:text-white">
-                Aksi Cepat
-              </h3>
-              <div className="grid gap-4 md:grid-cols-2">
-                {user.user_type === "sme" ? (
-                  <>
-                    <MenuLink
-                      colorClass="bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400"
-                      description="Jelajahi dan hubungi kreator"
-                      icon={Star}
-                      title="Cari Influencer"
-                      to="/influencers"
-                    />
-                    <MenuLink
-                      colorClass="bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400"
-                      description="Dapatkan rekomendasi yang sesuai untuk brand Anda"
-                      icon={Sparkles}
-                      title="Rekomendasi AI"
-                      to="/ai-recommendations"
-                    />
-                  </>
-                ) : user.user_type === "influencer" ? (
-                  <>
-                    <MenuLink
-                      description="Lihat bagaimana profil Anda terlihat oleh orang lain"
-                      icon={UserIcon}
-                      title="Lihat Profil Saya"
-                      to="/influencers"
-                    />
-                    {/* Add more influencer specific links here later */}
-                  </>
-                ) : null}
-              </div>
-            </motion.div>
 
-            {/* Account Details & Contact */}
             <div className="grid gap-6 md:grid-cols-2">
               <motion.div
                 animate={{ opacity: 1, y: 0 }}
