@@ -42,6 +42,12 @@ function formatDate(dateString: string): string {
   });
 }
 
+const LEADING_AT_SYMBOLS_REGEX = /^@+/;
+
+function normalizeSocialHandle(handle: string): string {
+  return handle.trim().replace(LEADING_AT_SYMBOLS_REGEX, "");
+}
+
 // --- Components ---
 
 function StatusBadge({
@@ -372,8 +378,8 @@ export function Profile() {
             {/* Social Links for Influencer */}
             {isInfluencer && influencerProfile && (
                <div className="flex gap-1 mt-4">
-                  <SocialLink icon={Instagram} href={influencerProfile.instagram_handle ? `https://instagram.com/${influencerProfile.instagram_handle}` : undefined} />
-                  <SocialLink icon={Twitter} href={influencerProfile.twitter_handle ? `https://twitter.com/${influencerProfile.twitter_handle}` : undefined} />
+                  <SocialLink icon={Instagram} href={influencerProfile.instagram_handle ? `https://instagram.com/${normalizeSocialHandle(influencerProfile.instagram_handle)}` : undefined} />
+                  <SocialLink icon={Twitter} href={influencerProfile.twitter_handle ? `https://twitter.com/${normalizeSocialHandle(influencerProfile.twitter_handle)}` : undefined} />
                   <SocialLink icon={Youtube} href={influencerProfile.youtube_handle ? `https://youtube.com/${influencerProfile.youtube_handle}` : undefined} />
                   <SocialLink icon={Globe} href={influencerProfile.portfolio_url} />
                </div>

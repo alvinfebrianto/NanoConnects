@@ -45,6 +45,8 @@ const mockInfluencerProfile = {
   location: "Jakarta",
   niche: "Lifestyle",
   verification_status: "verified",
+  instagram_handle: "@testcreator",
+  twitter_handle: "@testcreator",
 };
 
 const FOLLOWER_COUNT_PATTERN = /10[.,]000/;
@@ -113,6 +115,25 @@ describe("Profile Page", () => {
       expect(screen.getByText("Rata-rata")).toBeDefined();
       expect(screen.getByText("Harga per Post")).toBeDefined();
       expect(screen.getByText("Mulai Dari")).toBeDefined();
+    });
+  });
+
+  it("strips leading @ from instagram and twitter social links", async () => {
+    const influencerUser = { ...mockUser, user_type: "influencer" };
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { user: influencerUser, influencerProfile: mockInfluencerProfile },
+      }),
+    });
+
+    renderProfile(influencerUser);
+
+    await waitFor(() => {
+      expect(document.querySelector('a[href="https://instagram.com/testcreator"]')).not.toBeNull();
+      expect(document.querySelector('a[href="https://twitter.com/testcreator"]')).not.toBeNull();
+      expect(document.querySelector('a[href="https://instagram.com/@testcreator"]')).toBeNull();
+      expect(document.querySelector('a[href="https://twitter.com/@testcreator"]')).toBeNull();
     });
   });
 
