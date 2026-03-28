@@ -190,4 +190,68 @@ describe("Profile Page", () => {
       expect(screen.getByText("Profil diperbarui.")).toBeDefined();
     });
   });
+
+  it("clears previous success timer before scheduling a new one on rapid saves", async () => {
+    (global.fetch as any)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: { user: mockUser, influencerProfile: null },
+        }),
+      })
+      // first save
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ message: "Success" }),
+      })
+      // second save
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ message: "Success" }),
+      });
+
+    renderProfile();
+
+    await waitFor(() => {
+      expect(screen.getByText("Test User")).toBeDefined();
+    });
+
+    // --- first save ---
+    fireEvent.click(screen.getByText("Edit Profil"));
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Nama Anda")).toBeDefined();
+    });
+    fireEvent.change(screen.getByPlaceholderText("Nama Anda"), {
+      target: { value: "Name One" },
+    });
+    fireEvent.click(screen.getByText("Simpan Perubahan"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Profil diperbarui.")).toBeDefined();
+    });
+
+    // simulate 2s gap before user re-enters edit mode and saves again
+    await new Promise((r) => setTimeout(r, 2000));
+
+    // --- second save ---
+    fireEvent.click(screen.getByText("Edit Profil"));
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Nama Anda")).toBeDefined();
+    });
+    fireEvent.change(screen.getByPlaceholderText("Nama Anda"), {
+      target: { value: "Name Two" },
+    });
+    fireEvent.click(screen.getByText("Simpan Perubahan"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Profil diperbarui.")).toBeDefined();
+    });
+
+    // wait 2.5s — first timer (3s from save1) already fired at T=3s,
+    // but old timer was cleared; second timer fires at T=5s (3s after save2 at T=2s).
+    // At T=4.5s, success message must still be visible.
+    await new Promise((r) => setTimeout(r, 2500));
+
+    expect(screen.getByText("Profil diperbarui.")).toBeDefined();
+  }, 10000);
 });

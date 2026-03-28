@@ -264,6 +264,9 @@ export function Profile() {
         error: "",
         success: "Profil diperbarui.",
       });
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current);
+      }
       successTimerRef.current = setTimeout(
         () => setEditState((prev) => ({ ...prev, success: "" })),
         3000
