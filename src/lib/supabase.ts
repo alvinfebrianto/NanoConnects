@@ -44,6 +44,7 @@ const createDummyClient = () => {
       }),
       insert: async () => ({ error: null }),
     }),
+    rpc: async () => ({ data: [], error: null }),
   } as unknown as ReturnType<typeof createClient<Database>>;
 };
 

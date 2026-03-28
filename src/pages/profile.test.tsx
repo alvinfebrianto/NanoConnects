@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { useAuth } from "@/contexts/auth-context";
@@ -45,7 +51,12 @@ const mockInfluencerProfile = {
   location: "Jakarta",
   niche: "Lifestyle",
   verification_status: "verified",
+  instagram_handle: "@testcreator",
+  twitter_handle: "@testcreator",
 };
+
+const FOLLOWER_COUNT_PATTERN = /10[.,]000/;
+const RATE_CARD_PATTERN = /500[.,]000/;
 
 const renderProfile = (user = mockUser) => {
   (useAuth as Mock).mockReturnValue({
@@ -65,6 +76,7 @@ const renderProfile = (user = mockUser) => {
 
 describe("Profile Page", () => {
   beforeEach(() => {
+    cleanup();
     vi.clearAllMocks();
     (supabase.auth.getSession as any).mockResolvedValue({
       data: { session: { access_token: "mock-token" } },
@@ -84,7 +96,7 @@ describe("Profile Page", () => {
     await waitFor(() => {
       expect(screen.getByText("Test User")).toBeDefined();
       expect(screen.getByText("Pemilik Bisnis")).toBeDefined();
-      expect(screen.getByText("test@example.com")).toBeDefined();
+      expect(screen.getAllByText("test@example.com").length).toBeGreaterThan(0);
     });
   });
 
@@ -103,10 +115,45 @@ describe("Profile Page", () => {
     renderProfile(influencerUser);
 
     await waitFor(() => {
-      // Use regex to match 10,000 or 10.000
-      expect(screen.getByText(/10[.,]000/)).toBeDefined(); // Pengikut
-      expect(screen.getByText("5.5%")).toBeDefined(); // Tingkat Interaksi
-      expect(screen.getByText(/500[.,]000/)).toBeDefined(); // Harga per Post
+      expect(screen.getByText(FOLLOWER_COUNT_PATTERN)).toBeDefined();
+      expect(screen.getByText("5.5%")).toBeDefined();
+      expect(screen.getByText(RATE_CARD_PATTERN)).toBeDefined();
+      expect(screen.getByText("Pengikut")).toBeDefined();
+      expect(screen.getByText("Total Audiens")).toBeDefined();
+      expect(screen.getByText("Tingkat Interaksi")).toBeDefined();
+      expect(screen.getByText("Rata-rata")).toBeDefined();
+      expect(screen.getByText("Harga per Post")).toBeDefined();
+      expect(screen.getByText("Mulai Dari")).toBeDefined();
+    });
+  });
+
+  it("strips leading @ from instagram and twitter social links", async () => {
+    const influencerUser = { ...mockUser, user_type: "influencer" };
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: {
+          user: influencerUser,
+          influencerProfile: mockInfluencerProfile,
+        },
+      }),
+    });
+
+    renderProfile(influencerUser);
+
+    await waitFor(() => {
+      expect(
+        document.querySelector('a[href="https://instagram.com/testcreator"]')
+      ).not.toBeNull();
+      expect(
+        document.querySelector('a[href="https://twitter.com/testcreator"]')
+      ).not.toBeNull();
+      expect(
+        document.querySelector('a[href="https://instagram.com/@testcreator"]')
+      ).toBeNull();
+      expect(
+        document.querySelector('a[href="https://twitter.com/@testcreator"]')
+      ).toBeNull();
     });
   });
 
@@ -121,17 +168,15 @@ describe("Profile Page", () => {
     renderProfile();
 
     await waitFor(() => {
-      const buttons = screen.getAllByText("Edit Profil");
-      expect(buttons.length).toBeGreaterThan(0);
+      expect(screen.getByText("Edit Profil")).toBeDefined();
     });
 
-    const editButtons = screen.getAllByText("Edit Profil");
-    fireEvent.click(editButtons[0]);
+    fireEvent.click(screen.getByText("Edit Profil"));
 
     const nameInput = screen.getByPlaceholderText("Nama Anda");
     fireEvent.change(nameInput, { target: { value: "Updated Name" } });
 
-    expect(nameInput.closest("input")?.value).toBe("Updated Name");
+    expect((nameInput as HTMLInputElement).value).toBe("Updated Name");
 
     // Mock save response
     (global.fetch as any).mockResolvedValueOnce({
@@ -139,10 +184,74 @@ describe("Profile Page", () => {
       json: async () => ({ message: "Success" }),
     });
 
-    fireEvent.click(screen.getByText("Simpan"));
+    fireEvent.click(screen.getByText("Simpan Perubahan"));
 
     await waitFor(() => {
-      expect(screen.getByText("Profil berhasil diperbarui!")).toBeDefined();
+      expect(screen.getByText("Profil diperbarui.")).toBeDefined();
     });
   });
+
+  it("clears previous success timer before scheduling a new one on rapid saves", async () => {
+    (global.fetch as any)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: { user: mockUser, influencerProfile: null },
+        }),
+      })
+      // first save
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ message: "Success" }),
+      })
+      // second save
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ message: "Success" }),
+      });
+
+    renderProfile();
+
+    await waitFor(() => {
+      expect(screen.getByText("Test User")).toBeDefined();
+    });
+
+    // --- first save ---
+    fireEvent.click(screen.getByText("Edit Profil"));
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Nama Anda")).toBeDefined();
+    });
+    fireEvent.change(screen.getByPlaceholderText("Nama Anda"), {
+      target: { value: "Name One" },
+    });
+    fireEvent.click(screen.getByText("Simpan Perubahan"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Profil diperbarui.")).toBeDefined();
+    });
+
+    // simulate 2s gap before user re-enters edit mode and saves again
+    await new Promise((r) => setTimeout(r, 2000));
+
+    // --- second save ---
+    fireEvent.click(screen.getByText("Edit Profil"));
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Nama Anda")).toBeDefined();
+    });
+    fireEvent.change(screen.getByPlaceholderText("Nama Anda"), {
+      target: { value: "Name Two" },
+    });
+    fireEvent.click(screen.getByText("Simpan Perubahan"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Profil diperbarui.")).toBeDefined();
+    });
+
+    // wait 2.5s — first timer (3s from save1) already fired at T=3s,
+    // but old timer was cleared; second timer fires at T=5s (3s after save2 at T=2s).
+    // At T=4.5s, success message must still be visible.
+    await new Promise((r) => setTimeout(r, 2500));
+
+    expect(screen.getByText("Profil diperbarui.")).toBeDefined();
+  }, 10000);
 });
