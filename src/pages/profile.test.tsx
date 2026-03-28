@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
-import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { useAuth } from "@/contexts/auth-context";
 import { supabase } from "@/lib/supabase";
 import { Profile } from "./profile";
@@ -46,6 +46,9 @@ const mockInfluencerProfile = {
   niche: "Lifestyle",
   verification_status: "verified",
 };
+
+const FOLLOWER_COUNT_PATTERN = /10[.,]000/;
+const RATE_CARD_PATTERN = /500[.,]000/;
 
 const renderProfile = (user = mockUser) => {
   (useAuth as Mock).mockReturnValue({
@@ -101,9 +104,15 @@ describe("Profile Page", () => {
     renderProfile(influencerUser);
 
     await waitFor(() => {
-      expect(screen.getByText(/10[.,]000/)).toBeDefined();
+      expect(screen.getByText(FOLLOWER_COUNT_PATTERN)).toBeDefined();
       expect(screen.getByText("5.5%")).toBeDefined();
-      expect(screen.getByText(/500[.,]000/)).toBeDefined();
+      expect(screen.getByText(RATE_CARD_PATTERN)).toBeDefined();
+      expect(screen.getByText("Pengikut")).toBeDefined();
+      expect(screen.getByText("Total Audiens")).toBeDefined();
+      expect(screen.getByText("Tingkat Interaksi")).toBeDefined();
+      expect(screen.getByText("Rata-rata")).toBeDefined();
+      expect(screen.getByText("Harga per Post")).toBeDefined();
+      expect(screen.getByText("Mulai Dari")).toBeDefined();
     });
   });
 

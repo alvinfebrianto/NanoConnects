@@ -19,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth-context";
 import { supabase } from "@/lib/supabase";
 import type { Influencer } from "@/types";
+import type { LucideIcon } from "lucide-react";
 
 // --- Utility Functions ---
 
@@ -132,7 +133,7 @@ function StatItem({
   );
 }
 
-function SocialLink({ icon: Icon, href }: { icon: any; href?: string }) {
+function SocialLink({ icon: Icon, href }: { icon: LucideIcon; href?: string }) {
   if (!href) return null;
   return (
     <a
@@ -403,17 +404,17 @@ export function Profile() {
             <StatItem
               label="Pengikut"
               value={influencerProfile.followers_count.toLocaleString()}
-              subtext="Total Audience"
+              subtext="Total Audiens"
               delay={0.1}
             />
             <StatItem
-              label="Engagement Rate"
+              label="Tingkat Interaksi"
               value={`${influencerProfile.engagement_rate}%`}
-              subtext="Average"
+              subtext="Rata-rata"
               delay={0.2}
             />
             <StatItem
-              label="Rate Card"
+              label="Harga per Post"
               value={`Rp ${influencerProfile.price_per_post.toLocaleString("id-ID")}`}
               subtext="Mulai Dari"
               delay={0.3}
