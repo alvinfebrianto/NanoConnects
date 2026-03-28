@@ -252,7 +252,7 @@ export function Profile() {
   const isInfluencer = user.user_type === "influencer";
 
   return (
-    <div className="min-h-screen bg-zinc-50/50 dark:bg-black">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       {/* Decorative Header Background */}
       <div className="h-48 w-full bg-zinc-100 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 overflow-hidden relative">
         <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#3f3f46_1px,transparent_1px)] [background-size:16px_16px] opacity-50" />
