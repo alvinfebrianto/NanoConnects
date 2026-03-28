@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { useAuth } from "@/contexts/auth-context";
@@ -99,7 +105,10 @@ describe("Profile Page", () => {
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        data: { user: influencerUser, influencerProfile: mockInfluencerProfile },
+        data: {
+          user: influencerUser,
+          influencerProfile: mockInfluencerProfile,
+        },
       }),
     });
 
@@ -123,17 +132,28 @@ describe("Profile Page", () => {
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        data: { user: influencerUser, influencerProfile: mockInfluencerProfile },
+        data: {
+          user: influencerUser,
+          influencerProfile: mockInfluencerProfile,
+        },
       }),
     });
 
     renderProfile(influencerUser);
 
     await waitFor(() => {
-      expect(document.querySelector('a[href="https://instagram.com/testcreator"]')).not.toBeNull();
-      expect(document.querySelector('a[href="https://twitter.com/testcreator"]')).not.toBeNull();
-      expect(document.querySelector('a[href="https://instagram.com/@testcreator"]')).toBeNull();
-      expect(document.querySelector('a[href="https://twitter.com/@testcreator"]')).toBeNull();
+      expect(
+        document.querySelector('a[href="https://instagram.com/testcreator"]')
+      ).not.toBeNull();
+      expect(
+        document.querySelector('a[href="https://twitter.com/testcreator"]')
+      ).not.toBeNull();
+      expect(
+        document.querySelector('a[href="https://instagram.com/@testcreator"]')
+      ).toBeNull();
+      expect(
+        document.querySelector('a[href="https://twitter.com/@testcreator"]')
+      ).toBeNull();
     });
   });
 

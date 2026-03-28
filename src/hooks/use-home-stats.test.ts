@@ -23,7 +23,7 @@ describe("fetchHomeStats", () => {
         {
           umkm_count: 1200,
           influencer_count: 5300,
-          successful_campaign_count: 10450,
+          successful_campaign_count: 10_450,
           satisfaction_rate: 95,
         },
       ],
@@ -37,7 +37,7 @@ describe("fetchHomeStats", () => {
     expect(result).toEqual({
       umkmCount: 1200,
       influencerCount: 5300,
-      successfulCampaignCount: 10450,
+      successfulCampaignCount: 10_450,
       satisfactionRate: 95,
     });
   });

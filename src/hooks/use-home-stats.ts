@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import type { Database } from "@/lib/database.types";
 import { supabase } from "@/lib/supabase";
 
-type HomeStatsRpcRow = Database["public"]["Functions"]["get_homepage_stats"]["Returns"][number];
+type HomeStatsRpcRow =
+  Database["public"]["Functions"]["get_homepage_stats"]["Returns"][number];
 
 export interface HomeStats {
   umkmCount: number;
