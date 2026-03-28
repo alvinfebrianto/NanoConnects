@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useHomeStats } from "@/hooks/use-home-stats";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 
 function useCountUp(end: number, isActive: boolean, duration = 1800) {
@@ -39,7 +40,7 @@ function StatCard({
   delay,
 }: {
   value: number;
-  suffix: string;
+  suffix: "+" | "K+" | "%" | "K";
   label: string;
   isVisible: boolean;
   delay: number;
@@ -81,21 +82,47 @@ function StatCard({
   );
 }
 
-const STATS = [
-  { value: 1000, suffix: "+", label: "UMKM Bergabung" },
-  { value: 5000, suffix: "+", label: "Nano Influencer" },
-  { value: 10, suffix: "K+", label: "Campaign Sukses" },
-  { value: 95, suffix: "%", label: "Tingkat Kepuasan" },
-];
-
 export function StatsTicker() {
   const { ref, isVisible } = useScrollReveal<HTMLElement>();
+  const { data } = useHomeStats();
+
+  const successfulCampaignCount = data?.successfulCampaignCount ?? 0;
+  const campaignStat =
+    successfulCampaignCount >= 1000
+      ? {
+          value: Math.floor(successfulCampaignCount / 1000),
+          suffix: "K+" as const,
+        }
+      : { value: successfulCampaignCount, suffix: "+" as const };
+
+  const stats = [
+    {
+      value: data?.umkmCount ?? 0,
+      suffix: "+" as const,
+      label: "UMKM Bergabung",
+    },
+    {
+      value: data?.influencerCount ?? 0,
+      suffix: "+" as const,
+      label: "Nano Influencer",
+    },
+    {
+      value: campaignStat.value,
+      suffix: campaignStat.suffix,
+      label: "Campaign Sukses",
+    },
+    {
+      value: data?.satisfactionRate ?? 0,
+      suffix: "%" as const,
+      label: "Tingkat Kepuasan",
+    },
+  ];
 
   return (
     <section className="bg-[#F9F8E8] py-16 sm:py-20 dark:bg-zinc-900" ref={ref}>
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <dl className="grid grid-cols-2 gap-8 sm:gap-12 lg:grid-cols-4">
-          {STATS.map((stat, i) => (
+          {stats.map((stat, i) => (
             <StatCard
               delay={i * 150}
               isVisible={isVisible}

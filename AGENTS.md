@@ -2,11 +2,11 @@
 
 NanoConnect is a platform that matches SMEs (UMKM) with local nano influencers based on budget, niche, and target audience.
 
-You are on Bash on Windows Terminal.
+You are on `bash` on Windows.
 
 ## Always-apply rules
 
-- Run `npm.cmd run check` after making changes.
+- Run `npm.cmd run check` after making code changes.
 - User-facing website text must be Indonesian.
 - Pricing and budget displays must use Rupiah (`Rp`).
 - Load referenced files lazily (need-to-know), then treat loaded instructions as mandatory.

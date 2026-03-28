@@ -242,7 +242,15 @@ export interface Database {
       };
     };
     Functions: {
-      [_ in never]: never;
+      get_homepage_stats: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          umkm_count: number;
+          influencer_count: number;
+          successful_campaign_count: number;
+          satisfaction_rate: number;
+        }[];
+      };
     };
     Enums: {
       [_ in never]: never;

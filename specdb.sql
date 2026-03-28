@@ -231,7 +231,50 @@ WHERE user_type = 'influencer'
 GRANT SELECT ON public_user_profiles TO anon, authenticated;
 
 -- ============================================
--- Step 12: Create RLS policies
+-- Step 12: Create homepage stats RPC
+-- ============================================
+
+DROP FUNCTION IF EXISTS public.get_homepage_stats();
+
+CREATE OR REPLACE FUNCTION public.get_homepage_stats()
+RETURNS TABLE (
+    umkm_count BIGINT,
+    influencer_count BIGINT,
+    successful_campaign_count BIGINT,
+    satisfaction_rate INTEGER
+) LANGUAGE sql SECURITY DEFINER SET search_path = '' AS $$
+    SELECT
+        (
+            SELECT COUNT(*)
+            FROM public.users
+            WHERE user_type = 'sme' AND status = 'active'
+        ) AS umkm_count,
+        (
+            SELECT COUNT(*)
+            FROM public.influencers
+            WHERE is_available = TRUE
+        ) AS influencer_count,
+        (
+            SELECT COUNT(*)
+            FROM public.orders
+            WHERE order_status = 'completed'
+        ) AS successful_campaign_count,
+        COALESCE(
+            ROUND(
+                (
+                    SELECT AVG(rating::numeric)
+                    FROM public.reviews
+                ) * 20
+            ),
+            0
+        )::INTEGER AS satisfaction_rate;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_homepage_stats() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_homepage_stats() TO anon, authenticated;
+
+-- ============================================
+-- Step 13: Create RLS policies
 -- ============================================
 
 -- Users RLS
@@ -276,7 +319,7 @@ CREATE POLICY "SMEs can create reviews for their orders" ON reviews
     ));
 
 -- ============================================
--- Step 13: Insert sample data (optional - comment out if not needed)
+-- Step 14: Insert sample data (optional - comment out if not needed)
 -- ============================================
 
 -- Users (5 records)
