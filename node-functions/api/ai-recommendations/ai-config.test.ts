@@ -169,6 +169,8 @@ describe("getAiConfig", () => {
 
   it("throws when no API keys are configured", async () => {
     process.env.AI_API_KEYS = undefined;
+    process.env.OPENROUTER_API_KEYS = undefined;
+    process.env.OPENROUTER_API_KEY = undefined;
 
     const { getAiConfig } = await import("./ai-config");
 
