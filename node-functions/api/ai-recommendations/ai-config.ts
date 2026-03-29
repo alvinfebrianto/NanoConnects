@@ -16,12 +16,29 @@ function parseApiKeys(envValue: string | undefined): string[] {
     .filter((key) => key.length > 0);
 }
 
+function resolveApiKeysFromEnv(): string[] {
+  const supportedKeySources = [
+    process.env.AI_API_KEYS,
+    process.env.OPENROUTER_API_KEYS,
+    process.env.OPENROUTER_API_KEY,
+  ];
+
+  for (const envValue of supportedKeySources) {
+    const parsedKeys = parseApiKeys(envValue);
+    if (parsedKeys.length > 0) {
+      return parsedKeys;
+    }
+  }
+
+  return [];
+}
+
 export function getAiConfig(): AiConfig {
-  const apiKeys = parseApiKeys(process.env.AI_API_KEYS);
+  const apiKeys = resolveApiKeysFromEnv();
 
   if (apiKeys.length === 0) {
     throw new Error(
-      "API key AI tidak dikonfigurasi. Set AI_API_KEYS di environment variables."
+      "API key AI tidak dikonfigurasi. Set AI_API_KEYS (atau OPENROUTER_API_KEYS/OPENROUTER_API_KEY) di environment variables."
     );
   }
 
