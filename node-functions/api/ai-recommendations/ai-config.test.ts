@@ -113,6 +113,29 @@ describe("getAiConfig", () => {
     expect(config.model).toBe("openai/gpt-4o-mini");
   });
 
+  it("falls back to OPENROUTER_API_KEYS when AI_API_KEYS is not set", async () => {
+    process.env.AI_API_KEYS = undefined;
+    process.env.OPENROUTER_API_KEYS = "legacy-key-1,legacy-key-2";
+
+    const { getAiConfig } = await import("./ai-config");
+
+    const config = getAiConfig();
+
+    expect(config.apiKeys).toEqual(["legacy-key-1", "legacy-key-2"]);
+  });
+
+  it("falls back to OPENROUTER_API_KEY when only a single legacy key is provided", async () => {
+    process.env.AI_API_KEYS = undefined;
+    process.env.OPENROUTER_API_KEYS = undefined;
+    process.env.OPENROUTER_API_KEY = "legacy-single-key";
+
+    const { getAiConfig } = await import("./ai-config");
+
+    const config = getAiConfig();
+
+    expect(config.apiKeys).toEqual(["legacy-single-key"]);
+  });
+
   it("uses default model openrouter/free when AI_MODEL is not set", async () => {
     process.env.AI_API_KEYS = "key-1";
     process.env.AI_MODEL = undefined;

@@ -163,6 +163,7 @@ function SocialLink({ icon: Icon, href }: { icon: LucideIcon; href?: string }) {
   );
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Existing page orchestrates auth, profile fetch/update, and conditional rendering in one place; safe to keep for now.
 export function Profile() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -313,7 +314,9 @@ export function Profile() {
                 <img
                   alt={user.name}
                   className="h-full w-full object-cover"
+                  height={160}
                   src={formData.avatar_url}
+                  width={160}
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-zinc-300 dark:text-zinc-600">
@@ -324,7 +327,10 @@ export function Profile() {
               )}
             </div>
             {editState.isEditing && (
-              <button className="absolute right-2 bottom-2 rounded-full bg-zinc-900 p-2 text-white shadow-lg transition-colors hover:bg-black">
+              <button
+                className="absolute right-2 bottom-2 rounded-full bg-zinc-900 p-2 text-white shadow-lg transition-colors hover:bg-black"
+                type="button"
+              >
                 <Camera className="h-4 w-4" />
               </button>
             )}
@@ -371,6 +377,7 @@ export function Profile() {
                       onClick={() =>
                         setEditState((prev) => ({ ...prev, isEditing: false }))
                       }
+                      type="button"
                     >
                       Batal
                     </button>
@@ -378,6 +385,7 @@ export function Profile() {
                       className="rounded-lg bg-zinc-900 px-4 py-2 font-medium text-sm text-white transition-colors hover:bg-black disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
                       disabled={isLoading}
                       onClick={handleSave}
+                      type="button"
                     >
                       {isLoading ? "Menyimpan..." : "Simpan Perubahan"}
                     </button>
@@ -388,6 +396,7 @@ export function Profile() {
                     onClick={() =>
                       setEditState((prev) => ({ ...prev, isEditing: true }))
                     }
+                    type="button"
                   >
                     Edit Profil
                   </button>
@@ -395,6 +404,7 @@ export function Profile() {
                 <button
                   className="rounded-lg border border-transparent px-4 py-2 font-medium text-rose-600 text-sm transition-colors hover:border-rose-100 hover:bg-rose-50 dark:hover:border-rose-800 dark:hover:bg-rose-900/20"
                   onClick={handleLogout}
+                  type="button"
                 >
                   Keluar
                 </button>
