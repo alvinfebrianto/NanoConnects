@@ -253,5 +253,5 @@ describe("Profile Page", () => {
     await new Promise((r) => setTimeout(r, 2500));
 
     expect(screen.getByText("Profil diperbarui.")).toBeDefined();
-  }, 10000);
+  }, 10_000);
 });
