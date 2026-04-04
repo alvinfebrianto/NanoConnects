@@ -1,9 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import type { Database } from "@/lib/database.types";
-import { supabase } from "@/lib/supabase";
-
-type HomeStatsRpcRow =
-  Database["public"]["Functions"]["get_homepage_stats"]["Returns"][number];
 
 export interface HomeStats {
   umkmCount: number;
@@ -22,26 +17,31 @@ const DEFAULT_HOME_STATS: HomeStats = {
   satisfactionRate: 0,
 };
 
-export async function fetchHomeStats(): Promise<HomeStats> {
-  const { data, error } = await supabase.rpc("get_homepage_stats");
+const isObject = (
+  value: unknown
+): value is Record<string, number | null | undefined> =>
+  typeof value === "object" && value !== null;
 
-  if (error) {
-    throw new Error("Gagal memuat statistik beranda.");
-  }
-
-  const row = Array.isArray(data)
-    ? (data[0] as HomeStatsRpcRow | undefined)
-    : undefined;
-  if (!row) {
+const toHomeStats = (value: unknown): HomeStats => {
+  if (!isObject(value)) {
     return DEFAULT_HOME_STATS;
   }
 
   return {
-    umkmCount: getSafeNumber(row.umkm_count),
-    influencerCount: getSafeNumber(row.influencer_count),
-    successfulCampaignCount: getSafeNumber(row.successful_campaign_count),
-    satisfactionRate: getSafeNumber(row.satisfaction_rate),
+    umkmCount: getSafeNumber(value.umkmCount),
+    influencerCount: getSafeNumber(value.influencerCount),
+    successfulCampaignCount: getSafeNumber(value.successfulCampaignCount),
+    satisfactionRate: getSafeNumber(value.satisfactionRate),
   };
+};
+
+export async function fetchHomeStats(): Promise<HomeStats> {
+  const response = await fetch("/stats-cache", { method: "GET" });
+  if (!response.ok) {
+    throw new Error("Gagal memuat statistik beranda.");
+  }
+
+  return toHomeStats(await response.json());
 }
 
 export function useHomeStats() {

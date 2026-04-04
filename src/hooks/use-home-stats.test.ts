@@ -1,11 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/supabase", () => ({
-  supabase: {
-    rpc: vi.fn(),
-  },
-}));
-
 describe("fetchHomeStats", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -15,25 +9,26 @@ describe("fetchHomeStats", () => {
     vi.restoreAllMocks();
   });
 
-  it("mengembalikan statistik beranda dari fungsi RPC Supabase", async () => {
-    const { supabase } = await import("@/lib/supabase");
-
-    vi.mocked(supabase.rpc).mockResolvedValue({
-      data: [
+  it("mengembalikan statistik beranda dari API cache edge", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          umkmCount: 1200,
+          influencerCount: 5300,
+          successfulCampaignCount: 10_450,
+          satisfactionRate: 95,
+        }),
         {
-          umkm_count: 1200,
-          influencer_count: 5300,
-          successful_campaign_count: 10_450,
-          satisfaction_rate: 95,
-        },
-      ],
-      error: null,
-    } as never);
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }
+      )
+    );
 
     const { fetchHomeStats } = await import("./use-home-stats");
     const result = await fetchHomeStats();
 
-    expect(supabase.rpc).toHaveBeenCalledWith("get_homepage_stats");
+    expect(fetchSpy).toHaveBeenCalledWith("/stats-cache", { method: "GET" });
     expect(result).toEqual({
       umkmCount: 1200,
       influencerCount: 5300,
@@ -42,13 +37,13 @@ describe("fetchHomeStats", () => {
     });
   });
 
-  it("melempar error saat fungsi RPC gagal", async () => {
-    const { supabase } = await import("@/lib/supabase");
-
-    vi.mocked(supabase.rpc).mockResolvedValue({
-      data: null,
-      error: { message: "forbidden" },
-    } as never);
+  it("melempar error saat endpoint stats-cache gagal", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("error", {
+        status: 500,
+        headers: { "content-type": "text/plain" },
+      })
+    );
 
     const { fetchHomeStats } = await import("./use-home-stats");
 
