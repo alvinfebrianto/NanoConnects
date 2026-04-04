@@ -135,9 +135,15 @@ export const createStatsCacheHandler = ({
     );
     const nowMs = now();
 
-    const cached = normalizeCacheEntry(
-      await kvNamespace.get(STATS_CACHE_KEY, { type: "json" })
-    );
+    let cached = null;
+
+    try {
+      cached = normalizeCacheEntry(
+        await kvNamespace.get(STATS_CACHE_KEY, { type: "json" })
+      );
+    } catch {
+      // Kegagalan baca cache tidak boleh menghalangi fallback ke Supabase.
+    }
 
     if (cached && getCacheAgeMs(cached, nowMs) < ttlSeconds * 1000) {
       return jsonResponse(cached);
