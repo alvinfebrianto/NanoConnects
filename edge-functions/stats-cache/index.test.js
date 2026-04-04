@@ -125,4 +125,49 @@ describe("stats-cache edge function", () => {
       source: "stale-cache",
     });
   });
+
+  it("tetap mengembalikan data fresh saat penyimpanan KV gagal", async () => {
+    const now = Date.UTC(2026, 0, 1, 0, 15, 0);
+    const stalePayload = {
+      umkmCount: 12,
+      influencerCount: 18,
+      successfulCampaignCount: 6,
+      satisfactionRate: 81,
+      cachedAt: new Date(now - 120_000).toISOString(),
+      source: "cache",
+    };
+    const supabasePayload = {
+      umkmCount: 99,
+      influencerCount: 180,
+      successfulCampaignCount: 45,
+      satisfactionRate: 94,
+    };
+
+    const kv = {
+      get: async () => stalePayload,
+      put: () => {
+        throw new Error("kv put gagal");
+      },
+    };
+
+    const onRequest = createStatsCacheHandler({
+      now: () => now,
+      fetchStatsFromSupabase: async () => supabasePayload,
+      cacheTtlSeconds: 60,
+    });
+
+    const response = await onRequest({
+      request: createRequest(),
+      env: { stats: kv },
+      params: {},
+    });
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload).toEqual({
+      ...supabasePayload,
+      cachedAt: new Date(now).toISOString(),
+      source: "supabase",
+    });
+  });
 });

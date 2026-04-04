@@ -151,7 +151,11 @@ export const createStatsCacheHandler = ({
         source: "supabase",
       };
 
-      await kvNamespace.put(STATS_CACHE_KEY, JSON.stringify(payload));
+      try {
+        await kvNamespace.put(STATS_CACHE_KEY, JSON.stringify(payload));
+      } catch {
+        // Gagal menyimpan cache tidak boleh menghalangi response data fresh.
+      }
       return jsonResponse(payload);
     } catch {
       if (cached) {
