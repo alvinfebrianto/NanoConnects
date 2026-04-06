@@ -1,19 +1,24 @@
 import { AnimatePresence, motion } from "framer-motion";
-import type { LucideIcon } from "lucide-react";
 import {
+  ArrowUpRight,
   Building2,
   Camera,
   CheckCircle2,
   Globe,
   Instagram,
+  LogOut,
   Mail,
   MapPin,
+  Pencil,
+  Phone,
+  Save,
   ShieldCheck,
-  Sparkles,
   Star,
+  TrendingUp,
   Twitter,
+  Users,
+  X,
   Youtube,
-  Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -34,6 +39,28 @@ function getUserTypeLabel(type: string): string {
   }
 }
 
+function getStatusLabel(status: string): string {
+  switch (status) {
+    case "active":
+      return "Aktif";
+    case "inactive":
+      return "Tidak Aktif";
+    default:
+      return "Ditangguhkan";
+  }
+}
+
+function getStatusVariant(status: string): "success" | "warning" | "danger" {
+  switch (status) {
+    case "active":
+      return "success";
+    case "inactive":
+      return "warning";
+    default:
+      return "danger";
+  }
+}
+
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString("id-ID", {
     year: "numeric",
@@ -48,118 +75,88 @@ function normalizeSocialHandle(handle: string): string {
   return handle.trim().replace(LEADING_AT_SYMBOLS_REGEX, "");
 }
 
-// --- Components ---
-
-function StatusBadge({
-  status,
-  type,
-}: {
-  status: string;
-  type: "account" | "verification";
-}) {
-  const isAccount = type === "account";
-  let colorClass = "";
-  let label = "";
-
-  if (isAccount) {
-    switch (status) {
-      case "active":
-        colorClass =
-          "text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 dark:text-emerald-400";
-        label = "Aktif";
-        break;
-      case "inactive":
-        colorClass =
-          "text-amber-600 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-400";
-        label = "Tidak Aktif";
-        break;
-      default:
-        colorClass =
-          "text-rose-600 bg-rose-50 dark:bg-rose-500/10 dark:text-rose-400";
-        label = "Ditangguhkan";
-        break;
-    }
-  } else {
-    switch (status) {
-      case "verified":
-        colorClass =
-          "text-blue-600 bg-blue-50 dark:bg-blue-500/10 dark:text-blue-400";
-        label = "Terverifikasi";
-        break;
-      case "pending":
-        colorClass =
-          "text-amber-600 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-400";
-        label = "Menunggu";
-        break;
-      default:
-        colorClass =
-          "text-zinc-500 bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-400";
-        label = "Belum Terverifikasi";
-        break;
-    }
+function formatFollowers(num: number): string {
+  if (num >= 1_000_000) {
+    return `${(num / 1_000_000).toFixed(1)}M`;
   }
+  if (num >= 1000) {
+    return `${(num / 1000).toFixed(1)}K`;
+  }
+  return num.toString();
+}
 
+// --- Animation Variants ---
+
+const stagger = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08, delayChildren: 0.1 },
+  },
+};
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 16 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const },
+  },
+};
+
+// --- Sub-Components ---
+
+function VerificationDot({ verified }: { verified: boolean }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-medium text-xs ${colorClass}`}
-    >
-      <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-      {label}
-    </span>
+      className={`inline-block h-2 w-2 rounded-full ${verified ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-600"}`}
+      title={verified ? "Terverifikasi" : "Belum Terverifikasi"}
+    />
   );
 }
 
-function StatItem({
+function SocialPill({
+  icon: Icon,
+  href,
   label,
-  value,
-  subtext,
-  delay = 0,
 }: {
+  icon: typeof Instagram;
+  href?: string;
   label: string;
-  value: string | number;
-  subtext?: string;
-  delay?: number;
 }) {
-  return (
-    <motion.div
-      animate={{ opacity: 1, y: 0 }}
-      className="group relative overflow-hidden rounded-2xl border border-zinc-100 bg-white p-6 transition-all hover:border-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
-      initial={{ opacity: 0, y: 10 }}
-      transition={{ delay, duration: 0.4 }}
-    >
-      <div className="flex flex-col">
-        <span className="mb-1 font-medium text-sm text-zinc-500 dark:text-zinc-400">
-          {label}
-        </span>
-        <span className="font-bold font-display text-3xl text-zinc-900 tracking-tight dark:text-white">
-          {value}
-        </span>
-        {subtext && (
-          <span className="mt-2 font-medium text-xs text-zinc-400 uppercase tracking-wide dark:text-zinc-500">
-            {subtext}
-          </span>
-        )}
-      </div>
-      <div className="absolute top-0 right-0 p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-        <Sparkles className="h-4 w-4 text-zinc-300 dark:text-zinc-600" />
-      </div>
-    </motion.div>
-  );
-}
-
-function SocialLink({ icon: Icon, href }: { icon: LucideIcon; href?: string }) {
   if (!href) {
     return null;
   }
   return (
     <a
-      className="p-2 text-zinc-400 transition-colors hover:text-zinc-900 dark:hover:text-white"
+      className="group inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm text-zinc-700 transition-all duration-200 hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-primary-600 dark:hover:bg-primary-950/40 dark:hover:text-primary-400"
       href={href}
       rel="noopener noreferrer"
       target="_blank"
     >
-      <Icon className="h-5 w-5" />
+      <Icon className="h-4 w-4" />
+      <span className="font-medium">{label}</span>
+      <ArrowUpRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
     </a>
+  );
+}
+
+function InfoRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-6">
+      <span className="w-36 shrink-0 text-sm text-zinc-500 dark:text-zinc-400">
+        {label}
+      </span>
+      <span className="font-medium text-zinc-900 dark:text-zinc-100">
+        {children}
+      </span>
+    </div>
   );
 }
 
@@ -295,32 +292,61 @@ export function Profile() {
   const isInfluencer = user.user_type === "influencer";
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      {/* Decorative Header Background */}
-      <div className="relative h-48 w-full overflow-hidden border-zinc-200 border-b bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] opacity-50 [background-size:16px_16px] dark:bg-[radial-gradient(#3f3f46_1px,transparent_1px)]" />
-      </div>
-
-      <div className="relative z-10 mx-auto -mt-20 max-w-5xl px-4 pb-20 sm:px-6 lg:px-8">
-        {/* Main Profile Header */}
-        <div className="mb-12 flex flex-col items-start gap-6 md:flex-row md:items-end">
+    <div className="min-h-screen bg-white dark:bg-zinc-950">
+      {/* Status toast */}
+      <AnimatePresence>
+        {(editState.success || editState.error) && (
           <motion.div
-            animate={{ scale: 1, opacity: 1 }}
-            className="group relative"
-            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="fixed top-20 right-6 z-50"
+            exit={{ opacity: 0, y: -12 }}
+            initial={{ opacity: 0, y: -12 }}
           >
-            <div className="h-32 w-32 overflow-hidden rounded-full border-4 border-white bg-zinc-100 shadow-xl md:h-40 md:w-40 dark:border-black dark:bg-zinc-800">
+            <div
+              className={`flex items-center gap-3 rounded-xl px-5 py-3 shadow-lg ${
+                editState.success
+                  ? "bg-emerald-600 text-white"
+                  : "bg-rose-600 text-white"
+              }`}
+            >
+              {editState.success ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
+                <X className="h-4 w-4" />
+              )}
+              <p className="font-medium text-sm">
+                {editState.success || editState.error}
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <motion.div
+        animate="show"
+        className="mx-auto max-w-4xl px-6 pt-12 pb-24 lg:px-8"
+        initial="hidden"
+        variants={stagger}
+      >
+        {/* ── Top section: avatar + identity ── */}
+        <motion.header
+          className="flex flex-col gap-8 md:flex-row md:items-start md:gap-10"
+          variants={fadeUp}
+        >
+          {/* Avatar */}
+          <div className="group relative shrink-0">
+            <div className="h-28 w-28 overflow-hidden rounded-3xl bg-zinc-100 ring-1 ring-zinc-200/60 dark:bg-zinc-800 dark:ring-zinc-700/60">
               {formData.avatar_url ? (
                 <img
                   alt={user.name}
                   className="h-full w-full object-cover"
-                  height={160}
+                  height={112}
                   src={formData.avatar_url}
-                  width={160}
+                  width={112}
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-zinc-300 dark:text-zinc-600">
-                  <span className="font-bold text-4xl">
+                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900 dark:to-primary-800">
+                  <span className="font-bold font-display text-3xl text-primary-700 dark:text-primary-300">
                     {user.name.charAt(0)}
                   </span>
                 </div>
@@ -328,20 +354,21 @@ export function Profile() {
             </div>
             {editState.isEditing && (
               <button
-                className="absolute right-2 bottom-2 rounded-full bg-zinc-900 p-2 text-white shadow-lg transition-colors hover:bg-black"
+                className="absolute -right-2 -bottom-2 rounded-xl bg-zinc-900 p-2 text-white shadow-md transition-transform hover:scale-105 active:scale-95 dark:bg-zinc-100 dark:text-zinc-900"
                 type="button"
               >
-                <Camera className="h-4 w-4" />
+                <Camera className="h-3.5 w-3.5" />
               </button>
             )}
-          </motion.div>
+          </div>
 
-          <div className="w-full flex-1 md:mb-4">
-            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-              <div>
+          {/* Identity + actions */}
+          <div className="flex-1">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="space-y-2">
                 {editState.isEditing ? (
                   <input
-                    className="w-full border-zinc-200 border-b-2 bg-transparent pb-1 font-bold text-3xl outline-none focus:border-zinc-900 md:w-auto dark:border-zinc-700 dark:text-white dark:focus:border-white"
+                    className="w-full border-0 border-primary-400 border-b-2 bg-transparent pb-1 font-bold font-display text-3xl tracking-tight outline-none placeholder:text-zinc-400 dark:border-primary-500 dark:text-white"
                     onChange={(e) =>
                       setFormData((prev) => ({ ...prev, name: e.target.value }))
                     }
@@ -350,30 +377,33 @@ export function Profile() {
                     value={formData.name}
                   />
                 ) : (
-                  <h1 className="font-bold font-display text-3xl text-zinc-900 tracking-tight md:text-4xl dark:text-white">
+                  <h1 className="font-bold font-display text-3xl text-zinc-900 tracking-tight dark:text-white">
                     {user.name}
                   </h1>
                 )}
 
-                <div className="mt-2 flex items-center gap-3 text-zinc-500 dark:text-zinc-400">
-                  <span className="flex items-center gap-1.5 font-medium text-sm">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-100 px-2.5 py-1 font-medium text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                     {user.user_type === "sme" ? (
-                      <Building2 className="h-4 w-4" />
+                      <Building2 className="h-3.5 w-3.5" />
                     ) : (
-                      <Star className="h-4 w-4" />
+                      <Star className="h-3.5 w-3.5" />
                     )}
                     {getUserTypeLabel(user.user_type)}
                   </span>
-                  <span className="h-1 w-1 rounded-full bg-zinc-300 dark:bg-zinc-700" />
-                  <span className="text-sm">{user.email}</span>
+                  <VerificationDot verified={user.email_verified} />
+                  <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                    Bergabung {formatDate(user.created_at)}
+                  </span>
                 </div>
               </div>
 
-              <div className="flex gap-3">
+              {/* Action buttons */}
+              <div className="flex items-center gap-2">
                 {editState.isEditing ? (
                   <>
                     <button
-                      className="px-4 py-2 font-medium text-sm text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+                      className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 px-4 py-2 text-sm text-zinc-600 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
                       onClick={() =>
                         setEditState((prev) => ({ ...prev, isEditing: false }))
                       }
@@ -382,40 +412,44 @@ export function Profile() {
                       Batal
                     </button>
                     <button
-                      className="rounded-lg bg-zinc-900 px-4 py-2 font-medium text-sm text-white transition-colors hover:bg-black disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+                      className="btn-primary !rounded-xl !px-5 !py-2 !text-sm inline-flex items-center gap-2"
                       disabled={isLoading}
                       onClick={handleSave}
                       type="button"
                     >
-                      {isLoading ? "Menyimpan..." : "Simpan Perubahan"}
+                      <Save className="h-3.5 w-3.5" />
+                      {isLoading ? "Menyimpan..." : "Simpan"}
                     </button>
                   </>
                 ) : (
-                  <button
-                    className="rounded-lg border border-zinc-200 bg-white px-4 py-2 font-medium text-sm text-zinc-900 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
-                    onClick={() =>
-                      setEditState((prev) => ({ ...prev, isEditing: true }))
-                    }
-                    type="button"
-                  >
-                    Edit Profil
-                  </button>
+                  <>
+                    <button
+                      className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2 font-medium text-sm text-zinc-700 transition-all hover:border-zinc-300 hover:bg-zinc-50 active:scale-[0.98] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-700"
+                      onClick={() =>
+                        setEditState((prev) => ({ ...prev, isEditing: true }))
+                      }
+                      type="button"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Edit Profil
+                    </button>
+                    <button
+                      className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm text-zinc-400 transition-colors hover:text-rose-600 dark:hover:text-rose-400"
+                      onClick={handleLogout}
+                      type="button"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                    </button>
+                  </>
                 )}
-                <button
-                  className="rounded-lg border border-transparent px-4 py-2 font-medium text-rose-600 text-sm transition-colors hover:border-rose-100 hover:bg-rose-50 dark:hover:border-rose-800 dark:hover:bg-rose-900/20"
-                  onClick={handleLogout}
-                  type="button"
-                >
-                  Keluar
-                </button>
               </div>
             </div>
 
-            {/* Bio Section */}
-            <div className="mt-6 max-w-2xl">
+            {/* Bio */}
+            <div className="mt-5 max-w-xl">
               {editState.isEditing ? (
                 <textarea
-                  className="h-24 w-full resize-none rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm outline-none focus:ring-2 focus:ring-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:focus:ring-white"
+                  className="input-field !rounded-xl !py-3 min-h-[80px] resize-none text-sm"
                   onChange={(e) =>
                     setFormData((prev) => ({ ...prev, bio: e.target.value }))
                   }
@@ -429,119 +463,119 @@ export function Profile() {
               )}
             </div>
 
-            {/* Social Links for Influencer */}
+            {/* Social links for influencer */}
             {isInfluencer && influencerProfile && (
-              <div className="mt-4 flex gap-1">
-                <SocialLink
+              <div className="mt-5 flex flex-wrap gap-2">
+                <SocialPill
                   href={
                     influencerProfile.instagram_handle
                       ? `https://instagram.com/${normalizeSocialHandle(influencerProfile.instagram_handle)}`
                       : undefined
                   }
                   icon={Instagram}
+                  label="Instagram"
                 />
-                <SocialLink
+                <SocialPill
                   href={
                     influencerProfile.twitter_handle
                       ? `https://twitter.com/${normalizeSocialHandle(influencerProfile.twitter_handle)}`
                       : undefined
                   }
                   icon={Twitter}
+                  label="Twitter"
                 />
-                <SocialLink
+                <SocialPill
                   href={
                     influencerProfile.youtube_handle
                       ? `https://youtube.com/${influencerProfile.youtube_handle}`
                       : undefined
                   }
                   icon={Youtube}
+                  label="YouTube"
                 />
-                <SocialLink
+                <SocialPill
                   href={influencerProfile.portfolio_url}
                   icon={Globe}
+                  label="Portofolio"
                 />
               </div>
             )}
           </div>
-        </div>
+        </motion.header>
 
-        {/* Status Messages */}
-        <AnimatePresence>
-          {(editState.success || editState.error) && (
-            <motion.div
-              animate={{ opacity: 1, height: "auto" }}
-              className="mb-8 overflow-hidden"
-              exit={{ opacity: 0, height: 0 }}
-              initial={{ opacity: 0, height: 0 }}
-            >
-              <div
-                className={`flex items-center gap-3 rounded-lg p-4 ${editState.success ? "bg-emerald-50 text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-200" : "bg-rose-50 text-rose-900 dark:bg-rose-900/20 dark:text-rose-200"}`}
-              >
-                {editState.success ? (
-                  <CheckCircle2 className="h-5 w-5" />
-                ) : (
-                  <Zap className="h-5 w-5" />
-                )}
-                <p className="font-medium text-sm">
-                  {editState.success || editState.error}
-                </p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Stats Grid (Influencer Only) */}
+        {/* ── Stats strip (influencer only) ── */}
         {isInfluencer && influencerProfile && (
-          <div className="mb-12 grid grid-cols-1 gap-4 md:grid-cols-3">
-            <StatItem
-              delay={0.1}
-              label="Pengikut"
-              subtext="Total Audiens"
-              value={influencerProfile.followers_count.toLocaleString()}
-            />
-            <StatItem
-              delay={0.2}
-              label="Tingkat Interaksi"
-              subtext="Rata-rata"
-              value={`${influencerProfile.engagement_rate}%`}
-            />
-            <StatItem
-              delay={0.3}
-              label="Harga per Post"
-              subtext="Mulai Dari"
-              value={`Rp ${influencerProfile.price_per_post.toLocaleString("id-ID")}`}
-            />
-          </div>
+          <motion.div
+            className="mt-12 grid grid-cols-3 divide-x divide-zinc-200 rounded-2xl border border-zinc-200 bg-zinc-50/50 dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-900/50"
+            variants={fadeUp}
+          >
+            <div className="px-6 py-5 text-center">
+              <div className="flex items-center justify-center gap-2 text-zinc-500 dark:text-zinc-400">
+                <Users className="h-4 w-4" />
+                <span className="font-medium text-xs uppercase tracking-wider">
+                  Pengikut
+                </span>
+              </div>
+              <p className="mt-1 font-bold font-display text-2xl text-zinc-900 tracking-tight dark:text-white">
+                {formatFollowers(influencerProfile.followers_count)}
+              </p>
+            </div>
+            <div className="px-6 py-5 text-center">
+              <div className="flex items-center justify-center gap-2 text-zinc-500 dark:text-zinc-400">
+                <TrendingUp className="h-4 w-4" />
+                <span className="font-medium text-xs uppercase tracking-wider">
+                  Engagement
+                </span>
+              </div>
+              <p className="mt-1 font-bold font-display text-2xl text-zinc-900 tracking-tight dark:text-white">
+                {influencerProfile.engagement_rate}%
+              </p>
+            </div>
+            <div className="px-6 py-5 text-center">
+              <div className="flex items-center justify-center gap-2 text-zinc-500 dark:text-zinc-400">
+                <span className="font-medium text-xs uppercase tracking-wider">
+                  Harga/Post
+                </span>
+              </div>
+              <p className="mt-1 font-bold font-display text-2xl text-zinc-900 tracking-tight dark:text-white">
+                Rp {influencerProfile.price_per_post.toLocaleString("id-ID")}
+              </p>
+            </div>
+          </motion.div>
         )}
 
-        {/* Detailed Info Grid */}
-        <div className="grid grid-cols-1 gap-12 border-zinc-200 border-t pt-12 lg:grid-cols-2 dark:border-zinc-800">
-          {/* Contact Info */}
-          <section>
-            <h3 className="mb-6 flex items-center gap-2 font-semibold text-lg text-zinc-900 dark:text-white">
+        {/* ── Divider ── */}
+        <motion.div
+          className="my-12 h-px bg-zinc-200 dark:bg-zinc-800"
+          variants={fadeUp}
+        />
+
+        {/* ── Detail sections ── */}
+        <motion.div
+          className="grid grid-cols-1 gap-16 lg:grid-cols-5"
+          variants={fadeUp}
+        >
+          {/* Left column — Contact info */}
+          <section className="space-y-8 lg:col-span-3">
+            <h2 className="flex items-center gap-2 font-display font-semibold text-sm text-zinc-400 uppercase tracking-wider dark:text-zinc-500">
               <Mail className="h-4 w-4" />
               Informasi Kontak
-            </h3>
-            <div className="space-y-6">
-              <div className="group">
-                <span className="mb-1 block font-medium text-xs text-zinc-500 uppercase tracking-wider">
-                  Email
-                </span>
-                <div className="flex items-center justify-between font-medium text-zinc-900 dark:text-zinc-200">
+            </h2>
+
+            <div className="space-y-5">
+              <InfoRow label="Email">
+                <span className="flex items-center gap-2">
                   {user.email}
                   {user.email_verified && (
                     <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                   )}
-                </div>
-              </div>
-
-              <div className="group">
-                <span className="mb-1 block font-medium text-xs text-zinc-500 uppercase tracking-wider">
-                  Telepon
                 </span>
+              </InfoRow>
+
+              <InfoRow label="Telepon">
                 {editState.isEditing ? (
                   <input
-                    className="w-full rounded border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:focus:ring-white"
+                    className="input-field !rounded-lg !px-3 !py-2 !text-sm max-w-xs"
                     onChange={(e) =>
                       setFormData((prev) => ({
                         ...prev,
@@ -553,58 +587,46 @@ export function Profile() {
                     value={formData.phone}
                   />
                 ) : (
-                  <div className="font-medium text-zinc-900 dark:text-zinc-200">
+                  <span className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-zinc-400" />
                     {user.phone || "Belum diatur"}
-                  </div>
+                  </span>
                 )}
-              </div>
+              </InfoRow>
 
               {isInfluencer && influencerProfile && (
-                <div className="group">
-                  <span className="mb-1 block font-medium text-xs text-zinc-500 uppercase tracking-wider">
-                    Lokasi
-                  </span>
-                  <div className="flex items-center gap-2 font-medium text-zinc-900 dark:text-zinc-200">
+                <InfoRow label="Lokasi">
+                  <span className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-zinc-400" />
                     {influencerProfile.location}
-                  </div>
-                </div>
+                  </span>
+                </InfoRow>
               )}
             </div>
           </section>
 
-          {/* Account Status */}
-          <section>
-            <h3 className="mb-6 flex items-center gap-2 font-semibold text-lg text-zinc-900 dark:text-white">
+          {/* Right column — Account status */}
+          <section className="space-y-8 lg:col-span-2">
+            <h2 className="flex items-center gap-2 font-display font-semibold text-sm text-zinc-400 uppercase tracking-wider dark:text-zinc-500">
               <ShieldCheck className="h-4 w-4" />
               Status Akun
-            </h3>
-            <div className="space-y-6">
-              <div className="flex items-center justify-between border-zinc-100 border-b py-2 dark:border-zinc-800/50">
-                <span className="text-zinc-600 dark:text-zinc-400">
-                  Status Akun
-                </span>
-                <StatusBadge status={user.status} type="account" />
-              </div>
-              <div className="flex items-center justify-between border-zinc-100 border-b py-2 dark:border-zinc-800/50">
-                <span className="text-zinc-600 dark:text-zinc-400">
-                  Verifikasi Email
-                </span>
-                <StatusBadge
-                  status={user.email_verified ? "verified" : "pending"}
-                  type="verification"
-                />
-              </div>
-              <div className="flex items-center justify-between border-zinc-100 border-b py-2 dark:border-zinc-800/50">
-                <span className="text-zinc-600 dark:text-zinc-400">
-                  Bergabung Sejak
-                </span>
-                <span className="font-medium text-sm text-zinc-900 dark:text-zinc-200">
-                  {formatDate(user.created_at)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between border-zinc-100 border-b py-2 dark:border-zinc-800/50">
-                <span className="text-zinc-600 dark:text-zinc-400">
+            </h2>
+
+            <div className="space-y-4">
+              <StatusRow
+                label="Status"
+                value={getStatusLabel(user.status)}
+                variant={getStatusVariant(user.status)}
+              />
+              <StatusRow
+                label="Email"
+                value={
+                  user.email_verified ? "Terverifikasi" : "Belum Terverifikasi"
+                }
+                variant={user.email_verified ? "success" : "warning"}
+              />
+              <div className="flex items-center justify-between py-2">
+                <span className="text-sm text-zinc-500 dark:text-zinc-400">
                   Login Terakhir
                 </span>
                 <span className="font-medium text-sm text-zinc-900 dark:text-zinc-200">
@@ -615,8 +637,36 @@ export function Profile() {
               </div>
             </div>
           </section>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
+    </div>
+  );
+}
+
+// --- Small helper ---
+
+function StatusRow({
+  label,
+  value,
+  variant,
+}: {
+  label: string;
+  value: string;
+  variant: "success" | "warning" | "danger";
+}) {
+  const dotColor = {
+    success: "bg-emerald-500",
+    warning: "bg-amber-500",
+    danger: "bg-rose-500",
+  }[variant];
+
+  return (
+    <div className="flex items-center justify-between py-2">
+      <span className="text-sm text-zinc-500 dark:text-zinc-400">{label}</span>
+      <span className="inline-flex items-center gap-2 font-medium text-sm text-zinc-900 dark:text-zinc-200">
+        <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
+        {value}
+      </span>
     </div>
   );
 }

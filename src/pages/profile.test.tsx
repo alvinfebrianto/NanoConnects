@@ -55,7 +55,7 @@ const mockInfluencerProfile = {
   twitter_handle: "@testcreator",
 };
 
-const FOLLOWER_COUNT_PATTERN = /10[.,]000/;
+const FOLLOWER_COUNT_PATTERN = /10[.,]0K/;
 const RATE_CARD_PATTERN = /500[.,]000/;
 
 const renderProfile = (user = mockUser) => {
@@ -119,11 +119,8 @@ describe("Profile Page", () => {
       expect(screen.getByText("5.5%")).toBeDefined();
       expect(screen.getByText(RATE_CARD_PATTERN)).toBeDefined();
       expect(screen.getByText("Pengikut")).toBeDefined();
-      expect(screen.getByText("Total Audiens")).toBeDefined();
-      expect(screen.getByText("Tingkat Interaksi")).toBeDefined();
-      expect(screen.getByText("Rata-rata")).toBeDefined();
-      expect(screen.getByText("Harga per Post")).toBeDefined();
-      expect(screen.getByText("Mulai Dari")).toBeDefined();
+      expect(screen.getByText("Engagement")).toBeDefined();
+      expect(screen.getByText("Harga/Post")).toBeDefined();
     });
   });
 
@@ -184,7 +181,7 @@ describe("Profile Page", () => {
       json: async () => ({ message: "Success" }),
     });
 
-    fireEvent.click(screen.getByText("Simpan Perubahan"));
+    fireEvent.click(screen.getByText("Simpan"));
 
     await waitFor(() => {
       expect(screen.getByText("Profil diperbarui.")).toBeDefined();
@@ -224,7 +221,7 @@ describe("Profile Page", () => {
     fireEvent.change(screen.getByPlaceholderText("Nama Anda"), {
       target: { value: "Name One" },
     });
-    fireEvent.click(screen.getByText("Simpan Perubahan"));
+    fireEvent.click(screen.getByText("Simpan"));
 
     await waitFor(() => {
       expect(screen.getByText("Profil diperbarui.")).toBeDefined();
@@ -241,7 +238,7 @@ describe("Profile Page", () => {
     fireEvent.change(screen.getByPlaceholderText("Nama Anda"), {
       target: { value: "Name Two" },
     });
-    fireEvent.click(screen.getByText("Simpan Perubahan"));
+    fireEvent.click(screen.getByText("Simpan"));
 
     await waitFor(() => {
       expect(screen.getByText("Profil diperbarui.")).toBeDefined();
