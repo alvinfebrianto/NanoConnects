@@ -496,7 +496,7 @@ export function Profile() {
                 <SocialPill
                   href={influencerProfile.portfolio_url}
                   icon={Globe}
-                  label="Portfolio"
+                  label="Portofolio"
                 />
               </div>
             )}
