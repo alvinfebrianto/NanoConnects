@@ -140,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
       options: {
         data: { name: sanitizedName, user_type: userType },
+        emailRedirectTo: window.location.origin,
       },
     });
 
