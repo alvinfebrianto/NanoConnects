@@ -1,0 +1,24 @@
+name: Supabase heartbeat
+
+on:
+  schedule:
+    # Run every 2 days to perform one lightweight database read.
+    - cron: "0 0 */2 * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping homepage stats RPC
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          curl --fail --silent --show-error \
+            --request POST \
+            "${SUPABASE_URL%/}/rest/v1/rpc/get_homepage_stats" \
+            --header "apikey: ${SUPABASE_ANON_KEY}" \
+            --header "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            --header "content-type: application/json" \
+            --data '{}'
